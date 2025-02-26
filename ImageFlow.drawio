@@ -1,0 +1,60 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36" version="26.0.16">
+  <diagram name="Page-1" id="HAieS8kcULXonBxf-BVV">
+    <mxGraphModel dx="984" dy="540" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="lMrZ5ANftQnotJkdnZw0-1" target="lMrZ5ANftQnotJkdnZw0-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-1" value="Client" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="340" y="60" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="lMrZ5ANftQnotJkdnZw0-2" target="lMrZ5ANftQnotJkdnZw0-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-2" value="ProcessingRequest Model&lt;br&gt;(PostgresSQL Database)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="315" y="250" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="lMrZ5ANftQnotJkdnZw0-3" target="lMrZ5ANftQnotJkdnZw0-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-3" value="CSV Upload API&lt;br&gt;(Django REST Framework)&lt;br&gt;- Validates &amp;amp; stores CSV&lt;br&gt;- &lt;span class=&quot;hljs-keyword&quot;&gt;Returns&lt;/span&gt; Request ID&amp;nbsp;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="151" width="280" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="lMrZ5ANftQnotJkdnZw0-4" target="lMrZ5ANftQnotJkdnZw0-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-4" value="Celery Task Queue&lt;br&gt;(Redis as Broker)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="340" y="350" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="lMrZ5ANftQnotJkdnZw0-5" target="lMrZ5ANftQnotJkdnZw0-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-5" value="process_csv_images Task&amp;nbsp;&lt;br&gt;(Image Processing)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="325" y="440" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="lMrZ5ANftQnotJkdnZw0-6" target="lMrZ5ANftQnotJkdnZw0-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-6" value="Update DB&lt;br&gt;(Status, URL)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="190" y="520" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="lMrZ5ANftQnotJkdnZw0-7">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="400" y="630" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-7" value="Webhook Callback&lt;br&gt;(Optional)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="520" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-8" value="Status API (Django)&lt;br&gt;- Returns Request Status&lt;br&gt;- Includes Processed Data" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="630" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lMrZ5ANftQnotJkdnZw0-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.425;entryY=0.017;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="lMrZ5ANftQnotJkdnZw0-5" target="lMrZ5ANftQnotJkdnZw0-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

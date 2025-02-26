@@ -1,0 +1,86 @@
+{
+	"info": {
+		"_postman_id": "3ee8c91f-3044-42f8-83a0-4e5b8c54cc87",
+		"name": "ImageFlow",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "24395555"
+	},
+	"item": [
+		{
+			"name": "Upload",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "/Users/sunnysinha/Downloads/business-financial-data-sep-2024-quarter-csv.csv"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{base_url}}/upload/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"upload",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Status",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/status/dc879a11-4ba2-424c-a14c-70c8b9bb5d4b/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"status",
+						"dc879a11-4ba2-424c-a14c-70c8b9bb5d4b",
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api",
+			"type": "string"
+		}
+	]
+}
