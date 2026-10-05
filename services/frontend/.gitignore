@@ -2,3 +2,4 @@ node_modules
 .next
 *.tsbuildinfo
 .next-ads
+next-env.d.ts
