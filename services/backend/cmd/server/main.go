@@ -96,13 +96,17 @@ func run(log *slog.Logger, cfg config.Config) error {
 	go func() { errc <- srv.ListenAndServe() }()
 	log.Info("listening", "addr", cfg.Addr())
 
-	// Apply migrations once the database is reachable; /api/v1/ready reports the database meanwhile.
+	// Apply migrations once the database is reachable (/api/v1/ready reports the database meanwhile). The worker shares
+	// the process (set RUN_WORKER=false on API-only replicas) and starts only after the schema is in place; its queue is
+	// database-backed, so any number of workers can run side by side.
+	workerDone := make(chan struct{})
 	go func() {
+		defer close(workerDone)
 		for ctx.Err() == nil {
 			err := database.Migrate(ctx, pool, migrations.FS)
 			if err == nil {
 				log.Info("migrations applied")
-				return
+				break
 			}
 			log.Warn("could not prepare the database, retrying", "err", err)
 			select {
@@ -110,12 +114,9 @@ func run(log *slog.Logger, cfg config.Config) error {
 			case <-time.After(3 * time.Second):
 			}
 		}
-	}()
-
-	// The worker shares the process (set RUN_WORKER=false on API-only replicas); the queue is
-	// database-backed, so any number of workers can run side by side.
-	workerDone := make(chan struct{})
-	if cfg.RunWorker {
+		if ctx.Err() != nil || !cfg.RunWorker {
+			return
+		}
 		wcfg := worker.DefaultConfig()
 		wcfg.Concurrency = cfg.WorkerCount
 		wcfg.WebhookSecret = cfg.WebhookSecret
@@ -124,10 +125,8 @@ func run(log *slog.Logger, cfg config.Config) error {
 			Fetch: safeurl.NewClient(60*time.Second, false, true),
 			Hooks: safeurl.NewClient(15*time.Second, false, false),
 		}
-		go func() { defer close(workerDone); w.Run(ctx) }()
-	} else {
-		close(workerDone)
-	}
+		w.Run(ctx)
+	}()
 
 	select {
 	case err := <-errc:
