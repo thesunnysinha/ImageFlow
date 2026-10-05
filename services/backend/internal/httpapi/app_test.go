@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"app/internal/jobs"
+	"app/internal/storage"
 )
 
 type fakeStore struct {
@@ -28,6 +29,12 @@ func (f *fakeStore) Create(_ context.Context, owner string, w *string, urls []st
 	f.byOwner[owner] = j
 	return j, nil
 }
+func (f *fakeStore) OutputKey(_ context.Context, owner, id string, position int) (string, error) {
+	if j, ok := f.byOwner[owner]; ok && j.ID == id && position == 0 {
+		return "job/0.jpg", nil
+	}
+	return "", jobs.ErrNotFound
+}
 func (f *fakeStore) Get(_ context.Context, owner, id string) (jobs.Job, error) {
 	if j, ok := f.byOwner[owner]; ok && j.ID == id {
 		return j, nil
@@ -39,7 +46,7 @@ const jobID = "11111111-1111-1111-1111-111111111111"
 
 func newApp(s *fakeStore, max int) http.Handler {
 	return New(Dependencies{
-		Store: s, APIKeys: []string{"k1", "k2"}, MaxItemsPerJob: max,
+		Store: s, Storage: memStorage{}, APIKeys: []string{"k1", "k2"}, MaxItemsPerJob: max,
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 		ValidateURL: func(_ context.Context, u string) error {
 			if strings.Contains(u, "bad") {
@@ -132,5 +139,42 @@ func TestUnknownRouteAndMethodUseTheEnvelope(t *testing.T) {
 	}
 	if w, env := call(h, "DELETE", "/api/v1/health", "", ""); w.Code != 405 || env["success"] != false {
 		t.Fatalf("%d %v", w.Code, env)
+	}
+}
+
+type memStorage struct{}
+
+func (memStorage) Put(context.Context, string, io.Reader) (int64, error) { return 0, nil }
+func (memStorage) Open(_ context.Context, key string) (io.ReadCloser, error) {
+	if key == "job/0.jpg" {
+		return io.NopCloser(strings.NewReader("JPEGDATA")), nil
+	}
+	return nil, storage.ErrNotFound
+}
+
+func TestOutputIsServedToTheOwnerOnly(t *testing.T) {
+	h := newApp(fresh(), 10)
+	call(h, "POST", "/api/v1/jobs", "k1", `{"source_urls":["https://a.com/1.jpg"]}`)
+	req := httptest.NewRequest("GET", "/api/v1/jobs/"+jobID+"/items/0/output", nil)
+	req.Header.Set("Authorization", "Bearer k1")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != 200 || w.Body.String() != "JPEGDATA" || w.Header().Get("Content-Type") != "image/jpeg" {
+		t.Fatalf("code=%d type=%q body=%q", w.Code, w.Header().Get("Content-Type"), w.Body.String())
+	}
+	for _, c := range []struct{ key, path string }{
+		{"k2", "/api/v1/jobs/" + jobID + "/items/0/output"}, // another owner
+		{"k1", "/api/v1/jobs/" + jobID + "/items/7/output"}, // no such item
+		{"k1", "/api/v1/jobs/" + jobID + "/items/x/output"}, // not a number
+		{"", "/api/v1/jobs/" + jobID + "/items/0/output"},   // no key
+	} {
+		w, _ := call(h, "GET", c.path, c.key, "")
+		want := 404
+		if c.key == "" {
+			want = 401
+		}
+		if w.Code != want {
+			t.Errorf("%s as %q: got %d want %d", c.path, c.key, w.Code, want)
+		}
 	}
 }

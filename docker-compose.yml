@@ -12,6 +12,8 @@ services:
   backend:
     build: ./services/backend
     env_file: env/backend/.env
+    volumes:
+      - image-data:/data/images
     depends_on:
       database:
         condition: service_healthy
@@ -25,3 +27,4 @@ services:
       - backend
 volumes:
   postgres-data:
+  image-data:

@@ -15,6 +15,10 @@ type Config struct {
 	DatabaseURL    string
 	APIKeys        []string
 	MaxItemsPerJob int
+	StorageDir     string
+	WebhookSecret  string
+	RunWorker      bool
+	WorkerCount    int
 }
 
 // Load reads the environment. Launchpad supplies DATABASE_URL and the POSTGRES_* variables;
@@ -41,7 +45,17 @@ func Load(get func(string) string) (Config, error) {
 		}
 		maxItems = n
 	}
-	c := Config{Host: def("HOST", "0.0.0.0"), Port: port, MaxItemsPerJob: maxItems}
+	workers := 4
+	if raw := get("WORKER_CONCURRENCY"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 1 || n > 64 {
+			return Config{}, fmt.Errorf("WORKER_CONCURRENCY %q must be between 1 and 64", raw)
+		}
+		workers = n
+	}
+	c := Config{Host: def("HOST", "0.0.0.0"), Port: port, MaxItemsPerJob: maxItems,
+		StorageDir: def("STORAGE_DIR", "/data/images"), WebhookSecret: get("WEBHOOK_SECRET"),
+		RunWorker: get("RUN_WORKER") != "false", WorkerCount: workers}
 	for _, k := range strings.Split(get("API_KEYS"), ",") {
 		if k = strings.TrimSpace(k); k != "" {
 			c.APIKeys = append(c.APIKeys, k)
@@ -49,6 +63,9 @@ func Load(get func(string) string) (Config, error) {
 	}
 	if len(c.APIKeys) == 0 {
 		return Config{}, errors.New("API_KEYS is required (comma-separated)")
+	}
+	if c.RunWorker && c.WebhookSecret == "" {
+		return Config{}, errors.New("WEBHOOK_SECRET is required when the worker runs (set RUN_WORKER=false to disable it)")
 	}
 	if c.DatabaseURL = get("DATABASE_URL"); c.DatabaseURL == "" {
 		u := url.URL{

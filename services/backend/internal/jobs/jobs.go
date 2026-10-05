@@ -33,5 +33,6 @@ type Job struct {
 type Store interface {
 	Create(ctx context.Context, owner string, webhookURL *string, sourceURLs []string) (Job, error)
 	Get(ctx context.Context, owner, id string) (Job, error)
+	OutputKey(ctx context.Context, owner, id string, position int) (string, error)
 	Ping(ctx context.Context) error
 }
