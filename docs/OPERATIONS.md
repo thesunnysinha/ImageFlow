@@ -27,6 +27,7 @@ Backend (environment variables; the service refuses to start on invalid values):
 | `RUN_WORKER` | `true` | `false` makes an API-only replica (also skips the janitor) |
 | `WORKER_CONCURRENCY` | `4` | images processed at once per process (1 to 64) |
 | `MAX_ITEMS_PER_JOB` | `1000` | URLs accepted in one job |
+| `RATE_LIMIT_PER_MINUTE` | `120` | requests per minute per API key (burst of a quarter of that, at least 5); `0` turns it off. In memory per process, so with several replicas the effective limit is the sum. Health checks are never limited. |
 | `RETENTION_HOURS` | `168` | finished jobs and their images are deleted after this long; `0` keeps everything |
 | `STORAGE_BACKEND` | `local` | `local` or `s3` |
 | `STORAGE_DIR` | `/data/images` | local storage directory (mount a volume here) |
@@ -72,6 +73,7 @@ scripts/smoke.sh                  # the same stack, then checks it end to end an
 | `/ready` returns 503 | The database is unreachable or restarting. Check `DATABASE_URL`/`POSTGRES_*` and that Postgres is up; the API keeps retrying on its own. |
 | Jobs stay `queued` | The worker is not running (`RUN_WORKER=false` everywhere, or startup stuck on migrations: look for `could not prepare the database`). |
 | An item shows `processing` for minutes | A worker died mid-image. It is reclaimed automatically after the 5-minute lease and retried. |
+| Callers get `429 RATE_LIMITED` | They exceeded `RATE_LIMIT_PER_MINUTE` for their key; the `Retry-After` header says how long to wait. The mobile app polls a job every 2 seconds, which is well inside the default. |
 | Items fail with `source returned status 4xx` | The source URL is wrong or blocks the fetcher; permanent, not retried. 5xx and network errors are retried 3 times. |
 | `The URL is not allowed` on creation | The address resolves to a private, loopback or link-local address (SSRF protection). Public addresses only. |
 | Webhook never arrives | Check the receiver returns 2xx within 15 s; five attempts, then it stops. Verify the signature as `sha256=HMAC(WEBHOOK_SECRET, "<X-ImageFlow-Timestamp>.<body>")`. |
@@ -103,8 +105,8 @@ Needs you:
 
 Known gaps (not built):
 
-- **No rate limiting** on the API. Put the service behind your ingress or CDN limits, or add per-key limits before opening
-  the API to the public. The website does not call the API, so it is not affected.
+- **Rate limits are per process.** They stop one key from flooding a replica, but a shared limit across replicas would need
+  a shared store; use your ingress or CDN for a global cap. The website does not call the API, so it is not affected.
 - **No user accounts**: access is by shared API key.
 - **No metrics endpoint or alerting.** Logs and the health endpoints are what exist; add Prometheus or your platform's
   monitoring before relying on it unattended.

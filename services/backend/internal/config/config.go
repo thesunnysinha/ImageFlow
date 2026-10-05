@@ -28,6 +28,7 @@ type Config struct {
 	WebhookSecret  string
 	RunWorker      bool
 	WorkerCount    int
+	RateLimit      int           // requests per minute per API key; 0 disables
 	Retention      time.Duration // finished jobs and their files older than this are deleted; 0 keeps everything
 }
 
@@ -63,6 +64,14 @@ func Load(get func(string) string) (Config, error) {
 		}
 		workers = n
 	}
+	rateLimit := 120
+	if raw := get("RATE_LIMIT_PER_MINUTE"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 0 {
+			return Config{}, fmt.Errorf("RATE_LIMIT_PER_MINUTE %q must be 0 (off) or a positive number", raw)
+		}
+		rateLimit = n
+	}
 	retention := 7 * 24 * time.Hour
 	if raw := get("RETENTION_HOURS"); raw != "" {
 		n, err := strconv.Atoi(raw)
@@ -71,7 +80,7 @@ func Load(get func(string) string) (Config, error) {
 		}
 		retention = time.Duration(n) * time.Hour
 	}
-	c := Config{Retention: retention, Host: def("HOST", "0.0.0.0"), Port: port, MaxItemsPerJob: maxItems,
+	c := Config{RateLimit: rateLimit, Retention: retention, Host: def("HOST", "0.0.0.0"), Port: port, MaxItemsPerJob: maxItems,
 		StorageBackend: def("STORAGE_BACKEND", "local"), StorageDir: def("STORAGE_DIR", "/data/images"), WebhookSecret: get("WEBHOOK_SECRET"),
 		RunWorker: get("RUN_WORKER") != "false", WorkerCount: workers}
 	for _, k := range strings.Split(get("API_KEYS"), ",") {

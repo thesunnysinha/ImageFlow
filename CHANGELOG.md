@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Per-key rate limiting (`RATE_LIMIT_PER_MINUTE`, default 120, 0 disables): a token bucket per API key with a burst of a
+  quarter of the rate, answering `429 RATE_LIMITED` with `Retry-After`. Health checks are exempt. Tested with a fake clock
+  and on the real binary.
+- Add Dependabot (Go, npm, Docker, Actions; mobile limited to security updates because Expo pins versions per SDK), EAS build
+  profiles for the mobile app, an end-to-end HTTP test of the full client journey, and `docs/OPERATIONS.md`: every setting,
+  a troubleshooting table, secret rotation, and an honest list of what is verified, what needs you and what is not built.
 - Retention: a janitor deletes finished jobs and their stored images after `RETENTION_HOURS` (default 168; 0 disables),
   in batches, files first then rows, safe to repeat after an interruption. Queued and processing jobs are never touched.
   `Storage` gains an idempotent `Delete` (local disk and S3-compatible). Verified with Postgres tests and on the real

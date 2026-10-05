@@ -106,3 +106,23 @@ func TestRetention(t *testing.T) {
 		}
 	}
 }
+
+func TestRateLimitSetting(t *testing.T) {
+	with := func(v string) map[string]string {
+		return map[string]string{"API_KEYS": "k", "WEBHOOK_SECRET": "s", "RATE_LIMIT_PER_MINUTE": v}
+	}
+	if c, _ := Load(env(map[string]string{"API_KEYS": "k", "WEBHOOK_SECRET": "s"})); c.RateLimit != 120 {
+		t.Fatalf("default should be 120/min, got %d", c.RateLimit)
+	}
+	if c, err := Load(env(with("30"))); err != nil || c.RateLimit != 30 {
+		t.Fatalf("30: %d %v", c.RateLimit, err)
+	}
+	if c, err := Load(env(with("0"))); err != nil || c.RateLimit != 0 {
+		t.Fatalf("0 disables: %d %v", c.RateLimit, err)
+	}
+	for _, bad := range []string{"-5", "x", "1.5"} {
+		if _, err := Load(env(with(bad))); err == nil {
+			t.Errorf("RATE_LIMIT_PER_MINUTE=%q should be rejected", bad)
+		}
+	}
+}
