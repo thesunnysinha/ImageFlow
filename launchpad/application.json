@@ -12,7 +12,8 @@
     "projectId": null,
     "managed": false,
     "domain": null,
-    "url": null
+    "url": null,
+    "framework": "nextjs"
   },
   "backend": {
     "enabled": true,
@@ -49,7 +50,9 @@
     "backend": {
       "ENVIRONMENT": "production"
     },
-    "frontend": {}
+    "frontend": {
+      "API_ORIGIN": "https://imageflow.example.com"
+    }
   },
   "secretNames": [
     "API_KEYS",
