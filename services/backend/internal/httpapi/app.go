@@ -10,8 +10,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +21,7 @@ import (
 
 	"app/internal/envelope"
 	"app/internal/jobs"
+	"app/internal/storage"
 )
 
 const (
@@ -32,6 +35,7 @@ type URLValidator func(ctx context.Context, rawURL string) error
 
 type Dependencies struct {
 	Store          jobs.Store
+	Storage        storage.Storage
 	APIKeys        []string
 	MaxItemsPerJob int
 	ValidateURL    URLValidator
@@ -62,6 +66,7 @@ func New(d Dependencies) *gin.Engine {
 	protected := api.Group("", apiKeyAuth(d.APIKeys))
 	protected.POST("/jobs", h.createJob)
 	protected.GET("/jobs/:id", h.getJob)
+	protected.GET("/jobs/:id/items/:position/output", h.getOutput)
 
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, envelope.Failure("NOT_FOUND", "Not found.", trace(c), nil))
@@ -127,6 +132,36 @@ func (h *handlers) getJob(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, envelope.OK(job, trace(c)))
+}
+
+func (h *handlers) getOutput(c *gin.Context) {
+	position, err := strconv.Atoi(c.Param("position"))
+	if err != nil || position < 0 {
+		c.JSON(http.StatusNotFound, envelope.Failure("NOT_FOUND", "Not found.", trace(c), nil))
+		return
+	}
+	key, err := h.d.Store.OutputKey(c.Request.Context(), c.GetString(ownerKey), c.Param("id"), position)
+	if err == nil {
+		var rc io.ReadCloser
+		if rc, err = h.d.Storage.Open(c.Request.Context(), key); err == nil {
+			defer rc.Close()
+			ctype := "image/jpeg"
+			if strings.HasSuffix(key, ".png") {
+				ctype = "image/png"
+			}
+			c.Header("Content-Type", ctype)
+			c.Header("X-Content-Type-Options", "nosniff")
+			c.Status(http.StatusOK)
+			_, _ = io.Copy(c.Writer, rc)
+			return
+		}
+	}
+	if errors.Is(err, jobs.ErrNotFound) || errors.Is(err, storage.ErrNotFound) {
+		c.JSON(http.StatusNotFound, envelope.Failure("NOT_FOUND", "Not found.", trace(c), nil))
+		return
+	}
+	h.d.Logger.Error("get output", "err", err, "trace_id", trace(c))
+	c.JSON(http.StatusInternalServerError, envelope.Failure("INTERNAL_ERROR", "Internal server error", trace(c), nil))
 }
 
 func apiKeyAuth(keys []string) gin.HandlerFunc {

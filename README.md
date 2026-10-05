@@ -25,8 +25,17 @@ All responses use the envelope `{success, code, message, data, meta, trace_id}` 
 | GET | `/health`, `/ready` | none | liveness (no dependencies) and readiness (database) |
 | POST | `/jobs` | `Authorization: Bearer <key>` | body `{"source_urls": [...], "webhook_url": "..."}`, returns 202 + `Location` |
 | GET | `/jobs/{id}` | same | job and its items; only visible to the key that created it |
+| GET | `/jobs/{id}/items/{position}/output` | same | the compressed image of a completed item |
 
-Source and webhook URLs are rejected when they resolve to private, loopback or link-local addresses.
+Source and webhook URLs are rejected when they resolve to private, loopback or link-local addresses, and the worker's
+HTTP clients re-check the address at connect time (DNS rebinding, redirects).
+
+## Processing
+
+A worker (in the API process) fetches each image (20 MB and 40 megapixel limits), shrinks it to at most 2048 px on the
+longest side and re-encodes it (JPEG quality 80; PNG stays PNG; the original is kept when re-encoding would not make it
+smaller). Job status: `queued` → `processing` → `completed`, `partial` or `failed`. When a job has a `webhook_url`, a
+signed callback is sent once it finishes (see `DEPLOYMENT.md`).
 
 ## Develop
 
@@ -39,6 +48,6 @@ TEST_DATABASE_URL=postgres://... go test ./internal/jobs   # database tests skip
 
 ## Status
 
-Phase 1 is in place: job creation and status, migrations, API-key auth, URL safety checks. Not built yet: the worker
-(real fetching and compression, retries, webhooks), object storage with presigned uploads, user accounts, and the
-Expo mobile app.
+Phases 1 and 2 are in place: job creation and status, migrations, API-key auth, URL safety, and the worker (fetch,
+compress, store, retry, signed webhooks, output download). Not built yet: object storage (S3) with presigned uploads,
+user accounts, observability and the Expo mobile app.

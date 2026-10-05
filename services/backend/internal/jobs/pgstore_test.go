@@ -13,24 +13,41 @@ import (
 )
 
 // Needs a real database; skipped unless TEST_DATABASE_URL is set (the generated CI starts Postgres for it).
-func newStore(t *testing.T) (*jobs.PGStore, *pgxpool.Pool) {
+func newPool(t *testing.T, schema string) *pgxpool.Pool {
 	t.Helper()
 	url := os.Getenv("TEST_DATABASE_URL")
 	if url == "" {
 		t.Skip("TEST_DATABASE_URL is not set")
 	}
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, url)
+	// Each test package owns a schema, so packages running in parallel never touch each other's tables.
+	boot, err := pgxpool.New(ctx, url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer boot.Close()
+	if _, err := boot.Exec(ctx, `DROP SCHEMA IF EXISTS `+schema+` CASCADE; CREATE SCHEMA `+schema); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := pgxpool.ParseConfig(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.ConnConfig.RuntimeParams["search_path"] = schema
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	if _, err := pool.Exec(ctx, `DROP TABLE IF EXISTS job_items, jobs, schema_migrations; DROP TYPE IF EXISTS item_status, job_status`); err != nil {
-		t.Fatal(err)
-	}
 	if err := database.Migrate(ctx, pool, migrations.FS); err != nil {
 		t.Fatal(err)
 	}
+	return pool
+}
+
+func newStore(t *testing.T) (*jobs.PGStore, *pgxpool.Pool) {
+	t.Helper()
+	pool := newPool(t, "test_jobs")
 	return jobs.NewPGStore(pool), pool
 }
 
@@ -43,7 +60,7 @@ func TestMigrateIsIdempotent(t *testing.T) {
 		}
 	}
 	var n int
-	if err := pool.QueryRow(ctx, `SELECT count(*) FROM schema_migrations`).Scan(&n); err != nil || n != 1 {
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM schema_migrations`).Scan(&n); err != nil || n != 2 {
 		t.Fatalf("schema_migrations rows=%d err=%v", n, err)
 	}
 }

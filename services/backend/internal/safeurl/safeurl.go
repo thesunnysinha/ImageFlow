@@ -5,7 +5,10 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/http"
 	"net/url"
+	"syscall"
+	"time"
 )
 
 var ErrBlocked = errors.New("url is not allowed")
@@ -37,4 +40,47 @@ func Validate(ctx context.Context, raw string, r *net.Resolver) error {
 func Blocked(ip net.IP) bool {
 	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
 		ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast()
+}
+
+// NewClient returns an HTTP client that refuses to connect to private, loopback or link-local
+// addresses. The check runs on the resolved address at dial time, so DNS rebinding and
+// redirects to internal hosts are blocked too. allowPrivate exists for tests only.
+func NewClient(timeout time.Duration, allowPrivate bool, followRedirects bool) *http.Client {
+	dialer := &net.Dialer{
+		Timeout: 10 * time.Second,
+		Control: func(_, address string, _ syscall.RawConn) error {
+			host, _, err := net.SplitHostPort(address)
+			if err != nil {
+				return ErrBlocked
+			}
+			ip := net.ParseIP(host)
+			if ip == nil || (!allowPrivate && Blocked(ip)) {
+				return ErrBlocked
+			}
+			return nil
+		},
+	}
+	transport := &http.Transport{
+		DialContext:           dialer.DialContext,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 20 * time.Second,
+		MaxIdleConns:          20,
+		IdleConnTimeout:       30 * time.Second,
+		// Never use proxies from the environment: they would bypass the dial-time check.
+		Proxy: nil,
+	}
+	client := &http.Client{Timeout: timeout, Transport: transport}
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if !followRedirects {
+			return http.ErrUseLastResponse
+		}
+		if len(via) >= 3 {
+			return errors.New("too many redirects")
+		}
+		if req.URL.Scheme != "http" && req.URL.Scheme != "https" {
+			return ErrBlocked
+		}
+		return nil
+	}
+	return client
 }

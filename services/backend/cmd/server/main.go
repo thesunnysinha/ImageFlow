@@ -19,6 +19,8 @@ import (
 	"app/internal/httpapi"
 	"app/internal/jobs"
 	"app/internal/safeurl"
+	"app/internal/storage"
+	"app/internal/worker"
 	"app/migrations"
 )
 
@@ -55,10 +57,17 @@ func run(log *slog.Logger, cfg config.Config) error {
 	}
 	defer pool.Close()
 
+	store := jobs.NewPGStore(pool)
+	files, err := storage.NewLocal(cfg.StorageDir)
+	if err != nil {
+		return err
+	}
+
 	srv := &http.Server{
 		Addr: cfg.Addr(),
 		Handler: httpapi.New(httpapi.Dependencies{
-			Store:          jobs.NewPGStore(pool),
+			Store:          store,
+			Storage:        files,
 			APIKeys:        cfg.APIKeys,
 			MaxItemsPerJob: cfg.MaxItemsPerJob,
 			ValidateURL:    func(ctx context.Context, u string) error { return safeurl.Validate(ctx, u, nil) },
@@ -89,6 +98,23 @@ func run(log *slog.Logger, cfg config.Config) error {
 		}
 	}()
 
+	// The worker shares the process (set RUN_WORKER=false on API-only replicas); the queue is
+	// database-backed, so any number of workers can run side by side.
+	workerDone := make(chan struct{})
+	if cfg.RunWorker {
+		wcfg := worker.DefaultConfig()
+		wcfg.Concurrency = cfg.WorkerCount
+		wcfg.WebhookSecret = cfg.WebhookSecret
+		w := &worker.Worker{
+			Queue: store, Storage: files, Config: wcfg, Log: log,
+			Fetch: safeurl.NewClient(60*time.Second, false, true),
+			Hooks: safeurl.NewClient(15*time.Second, false, false),
+		}
+		go func() { defer close(workerDone); w.Run(ctx) }()
+	} else {
+		close(workerDone)
+	}
+
 	select {
 	case err := <-errc:
 		if !errors.Is(err, http.ErrServerClosed) {
@@ -97,7 +123,12 @@ func run(log *slog.Logger, cfg config.Config) error {
 	case <-ctx.Done():
 		shutdown, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
-		return srv.Shutdown(shutdown)
+		err := srv.Shutdown(shutdown)
+		select { // let in-flight images finish recording their result
+		case <-workerDone:
+		case <-shutdown.Done():
+		}
+		return err
 	}
 	return nil
 }

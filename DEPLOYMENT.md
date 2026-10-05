@@ -14,7 +14,7 @@ DNS, and keeps the result in Git. The backend will be served at **https://imagef
 | Database | `imageflow`, restricted login `imageflow_app`, delivered as Secret `imageflow-database` |
 | Redis / storage / frontend | off (set `services.redis.enabled` or `services.storage.enabled`, or enable the Vercel frontend, when you need them) |
 | Plain environment | `ENVIRONMENT` |
-| Secret names | `API_KEYS` (values are never stored in the manifest) |
+| Secret names | `API_KEYS`, `WEBHOOK_SECRET` (values are never stored in the manifest) |
 
 The backend reads `DATABASE_URL` and `POSTGRES_*` from the database Secret and applies its SQL migrations at start.
 
@@ -48,4 +48,11 @@ curl https://imageflow.example.com/api/v1/health
 - Versioned SQL migrations (`services/backend/migrations/*.sql`) are applied at start under an advisory lock, so several
   replicas can start together; they are retried until Postgres answers.
 - Authentication is API-key based for now (`API_KEYS`); jobs are visible only to the key that created them.
-- Image fetching and processing are not implemented yet: jobs are accepted and stored as `queued`.
+- The worker runs inside the API process (set `RUN_WORKER=false` on API-only replicas). It claims images with
+  `FOR UPDATE SKIP LOCKED`, so several replicas can share one database. Failed fetches are retried with backoff (3
+  attempts); a worker that dies mid-image is recovered after a 5-minute lease.
+- Webhooks are signed: header `X-ImageFlow-Signature` is `sha256=` + HMAC-SHA256 of `<X-ImageFlow-Timestamp>.<body>` with
+  `WEBHOOK_SECRET`. They are retried up to 5 times and never follow redirects.
+- **Storage is local disk** (`STORAGE_DIR`, default `/data/images`). That is fine for one replica with a persistent
+  volume; with several replicas or ephemeral disks, outputs would not be shared. Replace `internal/storage` with an
+  S3-compatible implementation (same interface) before scaling out.
