@@ -1,0 +1,29 @@
+name: Security
+
+on:
+  pull_request:
+    paths: ["services/backend/**", ".github/workflows/security.yml"]
+  push:
+    branches: [main]
+    paths: ["services/backend/**"]
+  schedule:
+    - cron: "17 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  govulncheck:
+    name: Go vulnerability scan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/backend
+    steps:
+      - uses: actions/checkout@v4
+      # Latest 1.25 patch release, so standard-library fixes are included.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.25.x
+          cache-dependency-path: services/backend/go.sum
+      - run: go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...
