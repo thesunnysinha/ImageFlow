@@ -64,6 +64,7 @@ func New(d Dependencies) *gin.Engine {
 	// API-key auth is the interim authenticator; the owner is derived from the key.
 	h := &handlers{d: d}
 	protected := api.Group("", apiKeyAuth(d.APIKeys))
+	protected.GET("/jobs", h.listJobs)
 	protected.POST("/jobs", h.createJob)
 	protected.GET("/jobs/:id", h.getJob)
 	protected.GET("/jobs/:id/items/:position/output", h.getOutput)
@@ -118,6 +119,40 @@ func (h *handlers) createJob(c *gin.Context) {
 	}
 	c.Header("Location", "/api/v1/jobs/"+job.ID)
 	c.JSON(http.StatusAccepted, envelope.OK(job, trace(c)))
+}
+
+// listJobs returns the caller's jobs newest first. limit defaults to 20 (max 100); before is an RFC 3339
+// created_at cursor, and the response's meta.next_before continues from the last row.
+func (h *handlers) listJobs(c *gin.Context) {
+	limit := 20
+	if raw := c.Query("limit"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 1 || n > 100 {
+			c.JSON(http.StatusUnprocessableEntity, invalid(c, "limit", "Must be between 1 and 100."))
+			return
+		}
+		limit = n
+	}
+	var before time.Time
+	if raw := c.Query("before"); raw != "" {
+		t, err := time.Parse(time.RFC3339Nano, raw)
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, invalid(c, "before", "Must be an RFC 3339 timestamp."))
+			return
+		}
+		before = t
+	}
+	list, err := h.d.Store.List(c.Request.Context(), c.GetString(ownerKey), limit, before)
+	if err != nil {
+		h.d.Logger.Error("list jobs", "err", err, "trace_id", trace(c))
+		c.JSON(http.StatusInternalServerError, envelope.Failure("INTERNAL_ERROR", "Internal server error", trace(c), nil))
+		return
+	}
+	env := envelope.OK(list, trace(c))
+	if len(list) == limit {
+		env.Meta["next_before"] = list[len(list)-1].CreatedAt.Format(time.RFC3339Nano)
+	}
+	c.JSON(http.StatusOK, env)
 }
 
 func (h *handlers) getJob(c *gin.Context) {

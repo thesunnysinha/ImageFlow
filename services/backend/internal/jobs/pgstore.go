@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -80,4 +81,29 @@ func (s *PGStore) Get(ctx context.Context, owner, id string) (Job, error) {
 		j.Items = append(j.Items, it)
 	}
 	return j, rows.Err()
+}
+
+func (s *PGStore) List(ctx context.Context, owner string, limit int, before time.Time) ([]Summary, error) {
+	if before.IsZero() {
+		before = time.Now().Add(24 * time.Hour)
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT j.id, j.status::text, j.created_at, j.updated_at,
+		       count(i.id), count(i.id) FILTER (WHERE i.status = 'completed'), count(i.id) FILTER (WHERE i.status = 'failed')
+		FROM jobs j LEFT JOIN job_items i ON i.job_id = j.id
+		WHERE j.owner = $1 AND j.created_at < $2
+		GROUP BY j.id ORDER BY j.created_at DESC LIMIT $3`, owner, before, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Summary{}
+	for rows.Next() {
+		var j Summary
+		if err := rows.Scan(&j.ID, &j.Status, &j.CreatedAt, &j.UpdatedAt, &j.Counts.Total, &j.Counts.Completed, &j.Counts.Failed); err != nil {
+			return nil, err
+		}
+		out = append(out, j)
+	}
+	return out, rows.Err()
 }

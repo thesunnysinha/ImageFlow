@@ -3,13 +3,14 @@
 Batch image-processing API. Clients submit image URLs and get a job they can poll; images are processed asynchronously.
 
 The project follows the layout of [master-project-template](https://github.com/thesunnysinha/master-project-template)
-(Go + Gin backend, PostgreSQL, Launchpad deployment, no web frontend: a mobile app will consume the API).
+(Go + Gin backend, PostgreSQL, Launchpad deployment). There is no web frontend; the mobile app is the client.
 
 ## Layout
 
 | Path | What |
 |---|---|
 | `services/backend` | Go (Gin) API: `cmd/server`, `internal/{config,envelope,httpapi,jobs,database,safeurl}`, `migrations/*.sql`, `openapi.yaml` |
+| `services/mobile` | Expo (React Native, TypeScript, Expo Router) app: server settings in the device keystore, job list, new job, live job progress with image previews |
 | `env/` | `env.template.yml` (safe defaults); generated secrets stay in ignored `env/env.override.local.yml` |
 | `docker-compose.yml`, `docker/nginx` | local stack: Postgres, backend, proxy on <http://localhost:8080> |
 | `launchpad/application.json`, `DEPLOYMENT.md` | Launchpad manifest and one-time setup |
@@ -24,6 +25,7 @@ All responses use the envelope `{success, code, message, data, meta, trace_id}` 
 |---|---|---|---|
 | GET | `/health`, `/ready` | none | liveness (no dependencies) and readiness (database) |
 | POST | `/jobs` | `Authorization: Bearer <key>` | body `{"source_urls": [...], "webhook_url": "..."}`, returns 202 + `Location` |
+| GET | `/jobs` | same | your jobs, newest first (`limit`, `before` cursor; counts only, no items) |
 | GET | `/jobs/{id}` | same | job and its items; only visible to the key that created it |
 | GET | `/jobs/{id}/items/{position}/output` | same | the compressed image of a completed item |
 
@@ -46,8 +48,20 @@ cd services/backend && go test -race ./...
 TEST_DATABASE_URL=postgres://... go test ./internal/jobs   # database tests skip without it
 ```
 
+## Mobile app
+
+```bash
+cd services/mobile
+npm install
+npm run typecheck && npm test
+npx expo start            # scan the QR code with Expo Go, or press a / i for an emulator
+```
+
+Open **Server** in the app and enter your API address and key. On an Android emulator, the host machine is
+`http://10.0.2.2:8080`. Plain `http` is for local development only; use `https` anywhere else.
+
 ## Status
 
-Phases 1 and 2 are in place: job creation and status, migrations, API-key auth, URL safety, and the worker (fetch,
-compress, store, retry, signed webhooks, output download). Not built yet: object storage (S3) with presigned uploads,
-user accounts, observability and the Expo mobile app.
+Phases 1 to 3 are in place: job creation and status, migrations, API-key auth, URL safety, the worker (fetch, compress,
+store, retry, signed webhooks, output download), and the mobile app. Not built yet: object storage (S3) with presigned
+uploads, user accounts (the app uses a shared API key), push notifications, observability, store builds (EAS).

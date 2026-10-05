@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Mobile app (`services/mobile`, Expo SDK 57, React Native, TypeScript, Expo Router, TanStack Query): server address and
+  API key kept in the device keystore and verified with a real request before saving; paged job list that refreshes while
+  jobs run; new job from pasted URLs with validation and optional webhook; job screen that polls until the job finishes
+  and shows compressed images (fetched with the API key) with the bytes saved. Typed API client and pure helpers are unit
+  tested; CI typechecks, tests and bundles for Android and iOS.
+- API: `GET /api/v1/jobs` lists the caller's jobs newest first, with per-job counts and a `before` cursor.
 - Worker: fetches images (size and pixel limits, SSRF-safe client that checks the address at connect time), shrinks and
   re-encodes JPEG and PNG, stores results (local disk behind a `Storage` interface), retries transient failures with
   backoff, recovers items from crashed workers after a lease, and sends HMAC-signed, retried webhooks when a job
