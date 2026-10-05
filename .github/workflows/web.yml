@@ -1,0 +1,35 @@
+name: Web
+
+on:
+  pull_request:
+    paths: ["services/frontend/**", ".github/workflows/web.yml"]
+  push:
+    branches: [main]
+    paths: ["services/frontend/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Typecheck, tests, build and browser test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: services/frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      # A real Chromium compresses real images in the built site, and checks the ads-enabled variant.
+      - run: npx playwright-core install --with-deps chromium
+      - run: npm run e2e

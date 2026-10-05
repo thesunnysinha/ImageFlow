@@ -59,3 +59,36 @@ curl https://imageflow.example.com/api/v1/health
   `S3_REGION`, `S3_USE_SSL` and optionally `S3_PREFIX`, and add `S3_ACCESS_KEY` and `S3_SECRET_KEY` to
   `secretNames` in `launchpad/application.json`. The bucket must already exist; the service refuses to start otherwise.
   With S3, `GET /api/v1/jobs/{id}/items/{position}/output-url` returns a 5-minute presigned download URL.
+
+## Website and AdSense
+
+`services/frontend` is a Next.js site (App Router, static pages) with the image compressor and tool pages for search
+(`/compress-jpg`, `/compress-png`, `/compress-image-to-100kb`, ...). **Compression runs in the visitor's browser**, so
+page views cost almost nothing to serve; the Go API is for the mobile app, developers and batch jobs. Deploy it on
+Vercel (`launchpad/application.json`: set `frontend.enabled` to `true` and `frontend.domain`; it is off until you
+have a domain) or any Node host.
+
+Environment variables (build time, set them in your hosting project):
+
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_SITE_URL` | public address, e.g. `https://tools.example.com` (canonical URLs, sitemap) |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | shown on the privacy page |
+| `NEXT_PUBLIC_ADSENSE_CLIENT` | `ca-pub-...`; enables the ad script and serves `/ads.txt` |
+| `NEXT_PUBLIC_ADSENSE_SLOT_CONTENT`, `_BOTTOM`, `_TOP` | ad unit ids; a slot without an id renders nothing |
+
+Getting ads live, in order:
+
+1. Deploy on **your own domain** (AdSense does not accept `*.vercel.app`) and set `NEXT_PUBLIC_SITE_URL`.
+2. Read `/privacy`, fix anything that does not match your business, and set `NEXT_PUBLIC_CONTACT_EMAIL`. It is a starting
+   point, not legal advice.
+3. Apply for AdSense and add the site. Google reviews content quality and traffic; approval is not guaranteed. Then set
+   `NEXT_PUBLIC_ADSENSE_CLIENT` and redeploy (this also publishes `/ads.txt`).
+4. In AdSense, **Privacy & messaging**, switch on the consent message for the EEA, UK and Switzerland. The site sets
+   Google Consent Mode defaults to "denied" for those regions before the ad tag loads; the certified consent dialog
+   itself comes from Google.
+5. After approval, create ad units, set the `NEXT_PUBLIC_ADSENSE_SLOT_*` ids and redeploy.
+
+Policy notes the layout follows: ads only on pages with real content, never inside or touching the tool's buttons
+(accidental clicks), fixed ad heights so the page does not jump. Verified: the rendered markup, script order and
+reserved space. **Not verified**: that ads actually serve, which needs an approved AdSense account.

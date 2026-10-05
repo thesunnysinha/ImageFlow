@@ -8,6 +8,6 @@
     "name": "imageflow"
   },
   "deployment": "docker-compose+launchpad",
-  "frontend": "none",
+  "frontend": "nextjs",
   "schema_version": 1
 }

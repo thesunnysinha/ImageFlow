@@ -3,13 +3,14 @@
 Batch image-processing API. Clients submit image URLs and get a job they can poll; images are processed asynchronously.
 
 The project follows the layout of [master-project-template](https://github.com/thesunnysinha/master-project-template)
-(Go + Gin backend, PostgreSQL, Launchpad deployment). There is no web frontend; the mobile app is the client.
+(Go + Gin backend, PostgreSQL, Launchpad deployment). The website compresses images in the visitor's browser (no server cost per visit) and is monetised with AdSense; the mobile app and API cover batch and developer use.
 
 ## Layout
 
 | Path | What |
 |---|---|
 | `services/backend` | Go (Gin) API: `cmd/server`, `internal/{config,envelope,httpapi,jobs,database,safeurl}`, `migrations/*.sql`, `openapi.yaml` |
+| `services/frontend` | Next.js website: in-browser image compressor and SEO tool pages, AdSense slots with consent defaults, privacy policy, sitemap |
 | `services/mobile` | Expo (React Native, TypeScript, Expo Router) app: compress photos on the device (no server), plus server settings in the keystore, job list, new job and live job progress for URL batches |
 | `env/` | `env.template.yml` (safe defaults); generated secrets stay in ignored `env/env.override.local.yml` |
 | `docker-compose.yml`, `docker/nginx` | local stack: Postgres, backend, proxy on <http://localhost:8080> |
@@ -48,6 +49,18 @@ python run.py dev           # docker compose up --build; API at http://localhost
 cd services/backend && go test -race ./...
 TEST_DATABASE_URL=postgres://... go test ./internal/jobs   # database tests skip without it
 ```
+
+## Website
+
+```bash
+cd services/frontend
+npm install
+npm run typecheck && npm test        # unit tests for the compression logic
+npm run build && npm run e2e         # a real Chromium compresses real images; also builds an ads-enabled variant
+npm run dev                          # http://localhost:5173
+```
+
+Ads, consent and deployment: see "Website and AdSense" in `DEPLOYMENT.md`.
 
 ## Mobile app
 
