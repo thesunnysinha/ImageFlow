@@ -76,3 +76,16 @@ paths:
             image/png: {schema: {type: string, format: binary}}
         '401': {description: Missing or invalid API key}
         '404': {description: No such completed item for this key}
+  /jobs/{id}/items/{position}/output-url:
+    get:
+      operationId: getItemOutputUrl
+      summary: Get a short-lived direct download URL for a completed item (S3-compatible storage only)
+      security: [{apiKey: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: position, in: path, required: true, schema: {type: integer, minimum: 0}}
+      responses:
+        '200': {description: "Envelope with data {url, expires_in}; the URL needs no API key"}
+        '401': {description: Missing or invalid API key}
+        '404': {description: No such completed item for this key}
+        '501': {description: The deployment uses local storage; use /output instead}

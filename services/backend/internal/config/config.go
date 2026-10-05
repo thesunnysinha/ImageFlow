@@ -10,12 +10,20 @@ import (
 	"strings"
 )
 
+// S3Settings configures any S3-compatible object store (AWS S3, Cloudflare R2, MinIO, ...).
+type S3Settings struct {
+	Endpoint, Bucket, Region, AccessKey, SecretKey, Prefix string
+	UseSSL                                                 bool
+}
+
 type Config struct {
 	Host, Port     string
 	DatabaseURL    string
 	APIKeys        []string
 	MaxItemsPerJob int
+	StorageBackend string // "local" (default) or "s3"
 	StorageDir     string
+	S3             S3Settings
 	WebhookSecret  string
 	RunWorker      bool
 	WorkerCount    int
@@ -54,7 +62,7 @@ func Load(get func(string) string) (Config, error) {
 		workers = n
 	}
 	c := Config{Host: def("HOST", "0.0.0.0"), Port: port, MaxItemsPerJob: maxItems,
-		StorageDir: def("STORAGE_DIR", "/data/images"), WebhookSecret: get("WEBHOOK_SECRET"),
+		StorageBackend: def("STORAGE_BACKEND", "local"), StorageDir: def("STORAGE_DIR", "/data/images"), WebhookSecret: get("WEBHOOK_SECRET"),
 		RunWorker: get("RUN_WORKER") != "false", WorkerCount: workers}
 	for _, k := range strings.Split(get("API_KEYS"), ",") {
 		if k = strings.TrimSpace(k); k != "" {
@@ -63,6 +71,23 @@ func Load(get func(string) string) (Config, error) {
 	}
 	if len(c.APIKeys) == 0 {
 		return Config{}, errors.New("API_KEYS is required (comma-separated)")
+	}
+	switch c.StorageBackend {
+	case "local":
+	case "s3":
+		c.S3 = S3Settings{
+			Endpoint: get("S3_ENDPOINT"), Bucket: get("S3_BUCKET"), Region: def("S3_REGION", "us-east-1"),
+			AccessKey: get("S3_ACCESS_KEY"), SecretKey: get("S3_SECRET_KEY"), Prefix: get("S3_PREFIX"),
+			UseSSL: get("S3_USE_SSL") != "false",
+		}
+		if c.S3.Endpoint == "" || c.S3.Bucket == "" || c.S3.AccessKey == "" || c.S3.SecretKey == "" {
+			return Config{}, errors.New("STORAGE_BACKEND=s3 requires S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY and S3_SECRET_KEY")
+		}
+		if strings.Contains(c.S3.Endpoint, "://") {
+			return Config{}, errors.New("S3_ENDPOINT must be host[:port] without a scheme (use S3_USE_SSL)")
+		}
+	default:
+		return Config{}, fmt.Errorf("STORAGE_BACKEND %q must be local or s3", c.StorageBackend)
 	}
 	if c.RunWorker && c.WebhookSecret == "" {
 		return Config{}, errors.New("WEBHOOK_SECRET is required when the worker runs (set RUN_WORKER=false to disable it)")

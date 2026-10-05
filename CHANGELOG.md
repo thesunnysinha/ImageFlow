@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- S3-compatible storage (`STORAGE_BACKEND=s3`: AWS S3, Cloudflare R2, MinIO, Backblaze B2) next to local disk, so
+  replicas share results and disks can be ephemeral. The bucket is checked at start. New
+  `GET /api/v1/jobs/{id}/items/{position}/output-url` returns a 5-minute presigned download URL (501 on local storage).
 - Mobile app (`services/mobile`, Expo SDK 57, React Native, TypeScript, Expo Router, TanStack Query): server address and
   API key kept in the device keystore and verified with a real request before saving; paged job list that refreshes while
   jobs run; new job from pasted URLs with validation and optional webhook; job screen that polls until the job finishes

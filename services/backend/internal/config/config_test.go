@@ -47,3 +47,38 @@ func TestWorkerCanBeDisabledWithoutASecret(t *testing.T) {
 		t.Fatalf("RunWorker=%v err=%v", c.RunWorker, err)
 	}
 }
+
+func TestStorageBackendSelection(t *testing.T) {
+	base := map[string]string{"API_KEYS": "k", "WEBHOOK_SECRET": "s"}
+	with := func(extra map[string]string) map[string]string {
+		m := map[string]string{}
+		for k, v := range base {
+			m[k] = v
+		}
+		for k, v := range extra {
+			m[k] = v
+		}
+		return m
+	}
+	c, err := Load(env(base))
+	if err != nil || c.StorageBackend != "local" {
+		t.Fatalf("default should be local: %+v %v", c, err)
+	}
+	full := map[string]string{"STORAGE_BACKEND": "s3", "S3_ENDPOINT": "s3.example.com", "S3_BUCKET": "b", "S3_ACCESS_KEY": "a", "S3_SECRET_KEY": "x", "S3_PREFIX": "p/"}
+	c, err = Load(env(with(full)))
+	if err != nil || c.S3.Bucket != "b" || !c.S3.UseSSL || c.S3.Region != "us-east-1" || c.S3.Prefix != "p/" {
+		t.Fatalf("s3 config: %+v %v", c.S3, err)
+	}
+	if c, _ = Load(env(with(map[string]string{"STORAGE_BACKEND": "s3", "S3_ENDPOINT": "minio:9000", "S3_BUCKET": "b", "S3_ACCESS_KEY": "a", "S3_SECRET_KEY": "x", "S3_USE_SSL": "false"}))); c.S3.UseSSL {
+		t.Fatal("S3_USE_SSL=false must disable TLS")
+	}
+	for name, extra := range map[string]map[string]string{
+		"missing bucket":  {"STORAGE_BACKEND": "s3", "S3_ENDPOINT": "e", "S3_ACCESS_KEY": "a", "S3_SECRET_KEY": "x"},
+		"scheme in host":  {"STORAGE_BACKEND": "s3", "S3_ENDPOINT": "https://e", "S3_BUCKET": "b", "S3_ACCESS_KEY": "a", "S3_SECRET_KEY": "x"},
+		"unknown backend": {"STORAGE_BACKEND": "ftp"},
+	} {
+		if _, err := Load(env(with(extra))); err == nil {
+			t.Errorf("%s should be rejected", name)
+		}
+	}
+}

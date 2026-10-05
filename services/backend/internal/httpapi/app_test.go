@@ -215,3 +215,34 @@ func TestListIsScopedToTheKeyAndValidatesParameters(t *testing.T) {
 		t.Errorf("no key: %d", w.Code)
 	}
 }
+
+type presigningStorage struct{ memStorage }
+
+func (presigningStorage) PresignGet(_ context.Context, key string, ttl time.Duration) (string, error) {
+	return "https://bucket.example/" + key + "?ttl=" + ttl.String(), nil
+}
+
+func TestOutputURLNeedsAPresigningStorage(t *testing.T) {
+	// Local-style storage: not implemented.
+	h := newApp(fresh(), 10)
+	call(h, "POST", "/api/v1/jobs", "k1", `{"source_urls":["https://a.com/1.jpg"]}`)
+	if w, env := call(h, "GET", "/api/v1/jobs/"+jobID+"/items/0/output-url", "k1", ""); w.Code != 501 || env["code"] != "NOT_IMPLEMENTED" {
+		t.Fatalf("%d %v", w.Code, env)
+	}
+	// S3-style storage: a short-lived URL, owner-scoped.
+	s := fresh()
+	h = New(Dependencies{Store: s, Storage: presigningStorage{}, APIKeys: []string{"k1", "k2"}, MaxItemsPerJob: 10,
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), ValidateURL: func(context.Context, string) error { return nil }})
+	call(h, "POST", "/api/v1/jobs", "k1", `{"source_urls":["https://a.com/1.jpg"]}`)
+	w, env := call(h, "GET", "/api/v1/jobs/"+jobID+"/items/0/output-url", "k1", "")
+	data, _ := env["data"].(map[string]any)
+	if w.Code != 200 || data["url"] != "https://bucket.example/job/0.jpg?ttl=5m0s" || data["expires_in"] != float64(300) {
+		t.Fatalf("%d %v", w.Code, env)
+	}
+	if w, _ := call(h, "GET", "/api/v1/jobs/"+jobID+"/items/0/output-url", "k2", ""); w.Code != 404 {
+		t.Fatalf("another key must get 404, got %d", w.Code)
+	}
+	if w, _ := call(h, "GET", "/api/v1/jobs/"+jobID+"/items/0/output-url", "", ""); w.Code != 401 {
+		t.Fatalf("no key: %d", w.Code)
+	}
+}
