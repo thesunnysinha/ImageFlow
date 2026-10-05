@@ -1,0 +1,51 @@
+openapi: 3.0.3
+info:
+  title: ImageFlow API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+components:
+  securitySchemes:
+    apiKey: {type: http, scheme: bearer}
+paths:
+  /health:
+    get:
+      operationId: healthCheck
+      responses:
+        '200': {description: Process is alive}
+  /ready:
+    get:
+      operationId: readinessCheck
+      responses:
+        '200': {description: Database is reachable}
+        '503': {description: Database is not reachable}
+  /jobs:
+    post:
+      operationId: createJob
+      summary: Create an image-processing job from source URLs
+      security: [{apiKey: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [source_urls]
+              properties:
+                source_urls: {type: array, minItems: 1, items: {type: string, format: uri}}
+                webhook_url: {type: string, format: uri}
+      responses:
+        '202': {description: Job accepted (standard envelope; Location header points at the job)}
+        '401': {description: Missing or invalid API key}
+        '422': {description: Invalid request or a URL that is not allowed}
+  /jobs/{id}:
+    get:
+      operationId: getJob
+      summary: Get a job and its items
+      security: [{apiKey: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: The job (standard envelope)}
+        '401': {description: Missing or invalid API key}
+        '404': {description: No such job for this key}

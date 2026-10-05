@@ -1,7 +1,9 @@
-
-
-venv/
-
+env/env.override.*.yml
+env/backend/.env
+env/database/.env
+.configure-backups/
+.configure-stage-*/
+.configure-incomplete
 __pycache__/
-
-migrations/
+*.py[cod]
+*.test

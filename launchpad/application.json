@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "id": "imageflow",
+  "name": "imageflow",
+  "repository": "thesunnysinha/ImageFlow",
+  "branch": "main",
+  "namespace": "apps-imageflow",
+  "frontend": {
+    "enabled": false,
+    "runtime": "vercel",
+    "rootDirectory": "services/frontend",
+    "projectId": null,
+    "managed": false,
+    "domain": null,
+    "url": null
+  },
+  "backend": {
+    "enabled": true,
+    "runtime": "vps",
+    "rootDirectory": "services/backend",
+    "dockerfile": "services/backend/Dockerfile",
+    "buildContext": "services/backend",
+    "image": null,
+    "port": 8000,
+    "healthPath": "/api/v1/health",
+    "managed": true,
+    "ingressName": "backend-ingress",
+    "domain": "imageflow.example.com",
+    "cpu": "500m",
+    "memory": "512Mi"
+  },
+  "services": {
+    "postgres": {
+      "enabled": true,
+      "managed": true,
+      "database": "imageflow",
+      "role": "imageflow_app",
+      "secretName": "imageflow-database",
+      "extensions": []
+    },
+    "redis": {
+      "enabled": false
+    },
+    "storage": {
+      "enabled": false
+    }
+  },
+  "environment": {
+    "backend": {
+      "ENVIRONMENT": "production"
+    },
+    "frontend": {}
+  },
+  "secretNames": [
+    "API_KEYS"
+  ],
+  "notes": "Generated from master-project-template for Launchpad-managed provisioning. Copy to applications/imageflow.json in common-services and open a pull request; DATABASE_URL and POSTGRES_* arrive from the imageflow-database Secret."
+}
