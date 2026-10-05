@@ -8,7 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test \"lib/**/*.test.ts\"",
-    "e2e": "node e2e/compress.mjs"
+    "e2e": "node e2e/compress.mjs",
+    "lighthouse": "node e2e/lighthouse.mjs"
   },
   "dependencies": {
     "fflate": "^0.8.3",
