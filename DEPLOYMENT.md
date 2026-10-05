@@ -53,6 +53,9 @@ curl https://imageflow.example.com/api/v1/health
   attempts); a worker that dies mid-image is recovered after a 5-minute lease.
 - Webhooks are signed: header `X-ImageFlow-Signature` is `sha256=` + HMAC-SHA256 of `<X-ImageFlow-Timestamp>.<body>` with
   `WEBHOOK_SECRET`. They are retried up to 5 times and never follow redirects.
+- **Retention:** a janitor in the worker process deletes finished jobs (and their stored images) older than
+  `RETENTION_HOURS` (default 168, seven days; `0` keeps everything), sweeping every 10 minutes. Queued and processing jobs
+  are never deleted. Deleted jobs answer 404, and their image files are gone, so tell API users how long results last.
 - **Storage** is local disk by default (`STORAGE_DIR`, default `/data/images`): fine for one replica with a persistent
   volume. For several replicas, ephemeral disks or direct downloads, switch to any S3-compatible service (AWS S3,
   Cloudflare R2, MinIO, Backblaze B2): set `STORAGE_BACKEND=s3`, `S3_ENDPOINT` (host[:port], no scheme), `S3_BUCKET`,

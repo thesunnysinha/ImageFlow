@@ -17,6 +17,8 @@ type Storage interface {
 	// Put stores r under key and returns the number of bytes written.
 	Put(ctx context.Context, key string, r io.Reader) (int64, error)
 	Open(ctx context.Context, key string) (io.ReadCloser, error)
+	// Delete removes an object. Deleting something that does not exist is not an error, so cleanup can be retried.
+	Delete(ctx context.Context, key string) error
 }
 
 type Local struct{ root string }
@@ -74,6 +76,19 @@ func (l *Local) Open(_ context.Context, key string) (io.ReadCloser, error) {
 		return nil, ErrNotFound
 	}
 	return f, err
+}
+
+func (l *Local) Delete(_ context.Context, key string) error {
+	p, err := l.path(key)
+	if err != nil {
+		return nil // an invalid key cannot name an object
+	}
+	if err := os.Remove(p); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	// Drop the per-job directory once it is empty (best effort).
+	_ = os.Remove(filepath.Dir(p))
+	return nil
 }
 
 type ctxReader struct {

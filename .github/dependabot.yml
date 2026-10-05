@@ -1,0 +1,28 @@
+# Weekly dependency updates, grouped so each ecosystem produces at most a couple of pull requests.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /services/backend
+    schedule: { interval: weekly }
+    groups:
+      go-dependencies: { patterns: ["*"] }
+  - package-ecosystem: npm
+    directory: /services/frontend
+    schedule: { interval: weekly }
+    groups:
+      web-dependencies: { patterns: ["*"], update-types: [minor, patch] }
+  # Expo pins React Native and its modules per SDK, so do not take version bumps one by one: upgrade the SDK with
+  # `npx expo install --fix`. Setting the limit to 0 keeps GitHub's security updates but stops routine version PRs.
+  - package-ecosystem: npm
+    directory: /services/mobile
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 0
+  - package-ecosystem: docker
+    directory: /services/backend
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /services/frontend
+    schedule: { interval: weekly }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }

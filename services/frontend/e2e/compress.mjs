@@ -1,16 +1,19 @@
 // End-to-end test: drives a real Chromium against the built site (npm run build first).
 // Usage: node e2e/compress.mjs   (CHROME_PATH overrides the browser; PORT the server port)
+// E2E_BASE_URL=http://host:port tests an already running server (e.g. the container behind the proxy) and skips the
+// checks that need a second, ads-enabled build.
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import assert from "node:assert/strict";
 import { chromium } from "playwright-core";
 
 const PORT = process.env.PORT ?? "3999";
-const BASE = `http://127.0.0.1:${PORT}`;
+const EXTERNAL = process.env.E2E_BASE_URL?.replace(/\/+$/, "");
+const BASE = EXTERNAL ?? `http://127.0.0.1:${PORT}`;
 const chromePath = process.env.CHROME_PATH ?? ["/opt/pw-browsers/chromium"].find(existsSync);
 
 // Run next directly (not through npx) so stopping it really stops the server, and fail early if the port is taken.
-if (await fetch(`http://127.0.0.1:${PORT}`).then(() => true, () => false)) throw new Error(`port ${PORT} is already in use: stop the old server first`);
+if (!EXTERNAL && (await fetch(`http://127.0.0.1:${PORT}`).then(() => true, () => false))) throw new Error(`port ${PORT} is already in use: stop the old server first`);
 const servers = [];
 function startServer(port, env = {}) {
   const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-p", port], { stdio: "ignore", env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1", ...env } });
@@ -19,7 +22,7 @@ function startServer(port, env = {}) {
 }
 const stop = () => servers.forEach((s) => s.kill("SIGTERM"));
 process.on("exit", stop);
-startServer(PORT);
+if (!EXTERNAL) startServer(PORT);
 
 async function waitForServer(base = BASE) {
   for (let i = 0; i < 60; i++) {
@@ -174,6 +177,7 @@ try {
     assert.equal((await fetch(BASE + "/no-such-page")).status, 404);
   });
 
+  if (!EXTERNAL) {
   // ---- Ads configured: build a second variant with an AdSense client and slots, and inspect what it renders.
   const adsEnv = { NEXT_PUBLIC_ADSENSE_CLIENT: "ca-pub-1234567890123456", NEXT_PUBLIC_ADSENSE_SLOT_CONTENT: "1111111111",
     NEXT_PUBLIC_ADSENSE_SLOT_BOTTOM: "2222222222", NEXT_PUBLIC_SITE_URL: "https://tools.example.com", NEXT_DIST_DIR: ".next-ads" };
@@ -222,6 +226,8 @@ try {
     assert.ok(ad.y >= tool.y + tool.height + 8, "the first ad sits below the tool, not inside or touching it");
     assert.equal(await page.locator(".tool aside.ad, .tool .adsbygoogle").count(), 0, "no ads inside the tool");
   });
+
+  }
 
   await browser.close();
   console.log(`\n${results.length} browser checks passed`);

@@ -1,2 +1,5 @@
 node_modules
 .next
+e2e
+lib/*.test.ts
+.next-ads

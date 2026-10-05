@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func env(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
 
@@ -79,6 +82,47 @@ func TestStorageBackendSelection(t *testing.T) {
 	} {
 		if _, err := Load(env(with(extra))); err == nil {
 			t.Errorf("%s should be rejected", name)
+		}
+	}
+}
+
+func TestRetention(t *testing.T) {
+	base := map[string]string{"API_KEYS": "k", "WEBHOOK_SECRET": "s"}
+	with := func(v string) map[string]string {
+		return map[string]string{"API_KEYS": "k", "WEBHOOK_SECRET": "s", "RETENTION_HOURS": v}
+	}
+	if c, _ := Load(env(base)); c.Retention != 7*24*time.Hour {
+		t.Fatalf("default should be 7 days, got %v", c.Retention)
+	}
+	if c, err := Load(env(with("24"))); err != nil || c.Retention != 24*time.Hour {
+		t.Fatalf("24h: %v %v", c.Retention, err)
+	}
+	if c, err := Load(env(with("0"))); err != nil || c.Retention != 0 {
+		t.Fatalf("0 keeps everything: %v %v", c.Retention, err)
+	}
+	for _, bad := range []string{"-1", "abc", "1.5"} {
+		if _, err := Load(env(with(bad))); err == nil {
+			t.Errorf("RETENTION_HOURS=%q should be rejected", bad)
+		}
+	}
+}
+
+func TestRateLimitSetting(t *testing.T) {
+	with := func(v string) map[string]string {
+		return map[string]string{"API_KEYS": "k", "WEBHOOK_SECRET": "s", "RATE_LIMIT_PER_MINUTE": v}
+	}
+	if c, _ := Load(env(map[string]string{"API_KEYS": "k", "WEBHOOK_SECRET": "s"})); c.RateLimit != 120 {
+		t.Fatalf("default should be 120/min, got %d", c.RateLimit)
+	}
+	if c, err := Load(env(with("30"))); err != nil || c.RateLimit != 30 {
+		t.Fatalf("30: %d %v", c.RateLimit, err)
+	}
+	if c, err := Load(env(with("0"))); err != nil || c.RateLimit != 0 {
+		t.Fatalf("0 disables: %d %v", c.RateLimit, err)
+	}
+	for _, bad := range []string{"-5", "x", "1.5"} {
+		if _, err := Load(env(with(bad))); err == nil {
+			t.Errorf("RATE_LIMIT_PER_MINUTE=%q should be rejected", bad)
 		}
 	}
 }

@@ -33,3 +33,5 @@ jobs:
       # A real Chromium compresses real images in the built site, and checks the ads-enabled variant.
       - run: npx playwright-core install --with-deps chromium
       - run: npm run e2e
+      # Accessibility, SEO and best practices stay at 95+ and layout shift at or below 0.1 (ads that jump hurt ranking).
+      - run: npm run lighthouse

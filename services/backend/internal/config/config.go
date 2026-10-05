@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // S3Settings configures any S3-compatible object store (AWS S3, Cloudflare R2, MinIO, ...).
@@ -27,6 +28,8 @@ type Config struct {
 	WebhookSecret  string
 	RunWorker      bool
 	WorkerCount    int
+	RateLimit      int           // requests per minute per API key; 0 disables
+	Retention      time.Duration // finished jobs and their files older than this are deleted; 0 keeps everything
 }
 
 // Load reads the environment. Launchpad supplies DATABASE_URL and the POSTGRES_* variables;
@@ -61,7 +64,23 @@ func Load(get func(string) string) (Config, error) {
 		}
 		workers = n
 	}
-	c := Config{Host: def("HOST", "0.0.0.0"), Port: port, MaxItemsPerJob: maxItems,
+	rateLimit := 120
+	if raw := get("RATE_LIMIT_PER_MINUTE"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 0 {
+			return Config{}, fmt.Errorf("RATE_LIMIT_PER_MINUTE %q must be 0 (off) or a positive number", raw)
+		}
+		rateLimit = n
+	}
+	retention := 7 * 24 * time.Hour
+	if raw := get("RETENTION_HOURS"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 0 {
+			return Config{}, fmt.Errorf("RETENTION_HOURS %q must be 0 (keep forever) or a positive number of hours", raw)
+		}
+		retention = time.Duration(n) * time.Hour
+	}
+	c := Config{RateLimit: rateLimit, Retention: retention, Host: def("HOST", "0.0.0.0"), Port: port, MaxItemsPerJob: maxItems,
 		StorageBackend: def("STORAGE_BACKEND", "local"), StorageDir: def("STORAGE_DIR", "/data/images"), WebhookSecret: get("WEBHOOK_SECRET"),
 		RunWorker: get("RUN_WORKER") != "false", WorkerCount: workers}
 	for _, k := range strings.Split(get("API_KEYS"), ",") {

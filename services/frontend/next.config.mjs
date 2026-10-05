@@ -7,6 +7,8 @@ const apiOrigin = process.env.API_ORIGIN?.replace(/\/+$/, "");
 const nextConfig = {
   poweredByHeader: false,
   distDir: process.env.NEXT_DIST_DIR || ".next", // lets the e2e test build an ads-enabled variant next to the normal build
+  // The container image runs the self-contained server; Vercel and `next start` do not need this.
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   async rewrites() {
     return apiOrigin ? [{ source: "/api/v1/:path*", destination: `${apiOrigin}/api/v1/:path*` }] : [];
   },

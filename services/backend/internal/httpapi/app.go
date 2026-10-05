@@ -35,12 +35,14 @@ const (
 type URLValidator func(ctx context.Context, rawURL string) error
 
 type Dependencies struct {
-	Store          jobs.Store
-	Storage        storage.Storage
-	APIKeys        []string
-	MaxItemsPerJob int
-	ValidateURL    URLValidator
-	Logger         *slog.Logger
+	Store              jobs.Store
+	Storage            storage.Storage
+	APIKeys            []string
+	MaxItemsPerJob     int
+	ValidateURL        URLValidator
+	RateLimitPerMinute int              // per API key; 0 disables
+	Now                func() time.Time // clock for the rate limiter (tests); nil means time.Now
+	Logger             *slog.Logger
 }
 
 func New(d Dependencies) *gin.Engine {
@@ -64,7 +66,7 @@ func New(d Dependencies) *gin.Engine {
 
 	// API-key auth is the interim authenticator; the owner is derived from the key.
 	h := &handlers{d: d}
-	protected := api.Group("", apiKeyAuth(d.APIKeys))
+	protected := api.Group("", apiKeyAuth(d.APIKeys), rateLimit(newLimiter(d.RateLimitPerMinute, d.Now)))
 	protected.GET("/jobs", h.listJobs)
 	protected.POST("/jobs", h.createJob)
 	protected.GET("/jobs/:id", h.getJob)

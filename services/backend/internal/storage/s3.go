@@ -107,6 +107,15 @@ func (s *S3) Open(ctx context.Context, key string) (io.ReadCloser, error) {
 	return obj, nil
 }
 
+func (s *S3) Delete(ctx context.Context, key string) error {
+	name, err := s.objectName(key)
+	if err != nil {
+		return nil // an invalid key cannot name an object
+	}
+	// S3 reports success for a missing object, which is what idempotent cleanup needs.
+	return s.client.RemoveObject(ctx, s.bucket, name, minio.RemoveObjectOptions{})
+}
+
 func (s *S3) PresignGet(ctx context.Context, key string, ttl time.Duration) (string, error) {
 	name, err := s.objectName(key)
 	if err != nil {
