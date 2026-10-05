@@ -28,13 +28,23 @@ export default function JobsScreen() {
 
   if (!ready) return <View style={styles.center}><ActivityIndicator /></View>;
 
+  const deviceCard = (
+    <Pressable accessibilityRole="button" accessibilityLabel="Compress photos on this device" onPress={() => router.push("/compress")}>
+      <Card>
+        <Text style={{ color: t.text, fontWeight: "700", fontSize: 16 }}>Compress photos on this device</Text>
+        <Message text="Pick photos, shrink them, then save or share. Works offline; nothing is uploaded." />
+      </Card>
+    </Pressable>
+  );
+
   if (!client) {
     return (
       <View style={styles.center}>
         {header}
-        <Text style={[styles.title, { color: t.text }]}>Connect to your server</Text>
-        <Message text="Enter the ImageFlow API address and your API key to start." />
-        <Button title="Set up server" onPress={() => router.push("/settings")} style={{ alignSelf: "stretch" }} />
+        <View style={{ alignSelf: "stretch" }}>{deviceCard}</View>
+        <Text style={[styles.title, { color: t.text, marginTop: 16 }]}>Batch jobs from URLs</Text>
+        <Message text="Connect to your ImageFlow server to process lists of image links." />
+        <Button title="Set up server" kind="plain" onPress={() => router.push("/settings")} style={{ alignSelf: "stretch" }} />
       </View>
     );
   }
@@ -50,6 +60,7 @@ export default function JobsScreen() {
         refreshControl={<RefreshControl refreshing={jobs.isRefetching && !jobs.isFetchingNextPage} onRefresh={() => jobs.refetch()} />}
         onEndReached={() => jobs.hasNextPage && !jobs.isFetchingNextPage && jobs.fetchNextPage()}
         onEndReachedThreshold={0.4}
+        ListHeaderComponent={<View style={{ marginBottom: 12 }}>{deviceCard}</View>}
         ListEmptyComponent={
           jobs.isPending ? <ActivityIndicator style={{ marginTop: 40 }} /> :
           jobs.isError ? <View style={{ gap: 12, marginTop: 24 }}><Message kind="error" text={jobs.error.message} /><Button title="Try again" kind="plain" onPress={() => jobs.refetch()} /></View> :

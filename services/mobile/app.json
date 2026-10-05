@@ -23,7 +23,13 @@
     "scheme": "imageflow",
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "ImageFlow needs access to your photos so you can choose pictures to compress."
+        }
+      ]
     ]
   }
 }

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Mobile: compress photos on the device. Pick up to 20 photos (`expo-image-picker`), re-encode as JPEG with the platform codecs
+  (`expo-image-manipulator`), with a quality preset, a longest-side limit and an optional maximum size in KB (bisection for the
+  best quality that fits, temp files cleaned up), then save or share (`expo-sharing`). Works before any server is configured,
+  offline, and uploads nothing. Never returns a bigger file than the original. Unit tests for the search and sizing logic; CI
+  still bundles Android and iOS. Not run on a device. No ads in the app yet (AdMob needs a development build and your AdMob ids).
 - Website (`services/frontend`, Next.js 15, static pages): image compressor that runs entirely in the browser (JPEG, PNG and
   WebP in and out, quality slider, "max size in KB" search, resize, ZIP download, up to 20 images), six tool pages with
   original copy and FAQ structured data, sitemap, robots, privacy policy, favicon. AdSense support that stays inert until
