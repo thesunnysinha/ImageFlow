@@ -28,6 +28,7 @@ const (
 	maxBodyBytes = 1 << 20
 	traceKey     = "trace_id"
 	ownerKey     = "owner"
+	presignTTL   = 5 * time.Minute
 )
 
 // URLValidator rejects URLs the service must not fetch or call (see package safeurl).
@@ -68,6 +69,7 @@ func New(d Dependencies) *gin.Engine {
 	protected.POST("/jobs", h.createJob)
 	protected.GET("/jobs/:id", h.getJob)
 	protected.GET("/jobs/:id/items/:position/output", h.getOutput)
+	protected.GET("/jobs/:id/items/:position/output-url", h.getOutputURL)
 
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, envelope.Failure("NOT_FOUND", "Not found.", trace(c), nil))
@@ -197,6 +199,37 @@ func (h *handlers) getOutput(c *gin.Context) {
 	}
 	h.d.Logger.Error("get output", "err", err, "trace_id", trace(c))
 	c.JSON(http.StatusInternalServerError, envelope.Failure("INTERNAL_ERROR", "Internal server error", trace(c), nil))
+}
+
+// getOutputURL returns a short-lived direct download URL (S3-compatible storage only), so large images do not
+// have to flow through the API. The URL needs no API key, so it expires quickly.
+func (h *handlers) getOutputURL(c *gin.Context) {
+	presigner, ok := h.d.Storage.(storage.Presigner)
+	if !ok {
+		c.JSON(http.StatusNotImplemented, envelope.Failure("NOT_IMPLEMENTED",
+			"Direct downloads need S3-compatible storage; use the /output endpoint.", trace(c), nil))
+		return
+	}
+	position, err := strconv.Atoi(c.Param("position"))
+	if err != nil || position < 0 {
+		c.JSON(http.StatusNotFound, envelope.Failure("NOT_FOUND", "Not found.", trace(c), nil))
+		return
+	}
+	key, err := h.d.Store.OutputKey(c.Request.Context(), c.GetString(ownerKey), c.Param("id"), position)
+	var signed string
+	if err == nil {
+		signed, err = presigner.PresignGet(c.Request.Context(), key, presignTTL)
+	}
+	if errors.Is(err, jobs.ErrNotFound) || errors.Is(err, storage.ErrNotFound) {
+		c.JSON(http.StatusNotFound, envelope.Failure("NOT_FOUND", "Not found.", trace(c), nil))
+		return
+	}
+	if err != nil {
+		h.d.Logger.Error("presign output", "err", err, "trace_id", trace(c))
+		c.JSON(http.StatusInternalServerError, envelope.Failure("INTERNAL_ERROR", "Internal server error", trace(c), nil))
+		return
+	}
+	c.JSON(http.StatusOK, envelope.OK(gin.H{"url": signed, "expires_in": int(presignTTL.Seconds())}, trace(c)))
 }
 
 func apiKeyAuth(keys []string) gin.HandlerFunc {

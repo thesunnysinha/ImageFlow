@@ -58,9 +58,23 @@ func run(log *slog.Logger, cfg config.Config) error {
 	defer pool.Close()
 
 	store := jobs.NewPGStore(pool)
-	files, err := storage.NewLocal(cfg.StorageDir)
-	if err != nil {
-		return err
+	var files storage.Storage
+	switch cfg.StorageBackend {
+	case "s3":
+		s3, err := storage.NewS3(ctx, storage.S3Config{
+			Endpoint: cfg.S3.Endpoint, Bucket: cfg.S3.Bucket, Region: cfg.S3.Region, AccessKey: cfg.S3.AccessKey,
+			SecretKey: cfg.S3.SecretKey, UseSSL: cfg.S3.UseSSL, Prefix: cfg.S3.Prefix,
+		})
+		if err != nil {
+			return err
+		}
+		files = s3
+	default:
+		local, err := storage.NewLocal(cfg.StorageDir)
+		if err != nil {
+			return err
+		}
+		files = local
 	}
 
 	srv := &http.Server{

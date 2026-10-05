@@ -53,6 +53,9 @@ curl https://imageflow.example.com/api/v1/health
   attempts); a worker that dies mid-image is recovered after a 5-minute lease.
 - Webhooks are signed: header `X-ImageFlow-Signature` is `sha256=` + HMAC-SHA256 of `<X-ImageFlow-Timestamp>.<body>` with
   `WEBHOOK_SECRET`. They are retried up to 5 times and never follow redirects.
-- **Storage is local disk** (`STORAGE_DIR`, default `/data/images`). That is fine for one replica with a persistent
-  volume; with several replicas or ephemeral disks, outputs would not be shared. Replace `internal/storage` with an
-  S3-compatible implementation (same interface) before scaling out.
+- **Storage** is local disk by default (`STORAGE_DIR`, default `/data/images`): fine for one replica with a persistent
+  volume. For several replicas, ephemeral disks or direct downloads, switch to any S3-compatible service (AWS S3,
+  Cloudflare R2, MinIO, Backblaze B2): set `STORAGE_BACKEND=s3`, `S3_ENDPOINT` (host[:port], no scheme), `S3_BUCKET`,
+  `S3_REGION`, `S3_USE_SSL` and optionally `S3_PREFIX`, and add `S3_ACCESS_KEY` and `S3_SECRET_KEY` to
+  `secretNames` in `launchpad/application.json`. The bucket must already exist; the service refuses to start otherwise.
+  With S3, `GET /api/v1/jobs/{id}/items/{position}/output-url` returns a 5-minute presigned download URL.

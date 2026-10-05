@@ -28,6 +28,7 @@ All responses use the envelope `{success, code, message, data, meta, trace_id}` 
 | GET | `/jobs` | same | your jobs, newest first (`limit`, `before` cursor; counts only, no items) |
 | GET | `/jobs/{id}` | same | job and its items; only visible to the key that created it |
 | GET | `/jobs/{id}/items/{position}/output` | same | the compressed image of a completed item |
+| GET | `/jobs/{id}/items/{position}/output-url` | same | 5-minute presigned download URL (S3 storage only; 501 with local storage) |
 
 Source and webhook URLs are rejected when they resolve to private, loopback or link-local addresses, and the worker's
 HTTP clients re-check the address at connect time (DNS rebinding, redirects).
@@ -63,5 +64,4 @@ Open **Server** in the app and enter your API address and key. On an Android emu
 ## Status
 
 Phases 1 to 3 are in place: job creation and status, migrations, API-key auth, URL safety, the worker (fetch, compress,
-store, retry, signed webhooks, output download), and the mobile app. Not built yet: object storage (S3) with presigned
-uploads, user accounts (the app uses a shared API key), push notifications, observability, store builds (EAS).
+store, retry, signed webhooks, output download), the mobile app, and S3-compatible storage. Not built yet: presigned uploads, user accounts (the app uses a shared API key), push notifications, observability, store builds (EAS).
