@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Remove the superseded prototype `apps/api`, and from `legacy/` the committed `.env` files (database password; rotate it
+  and the Django `SECRET_KEY`), the vendored `staticfiles/` and a sample CSV. All remain in git history.
 - Restructure to the master-project-template layout (`services/backend`, `env/`, `launchpad/`, `docker-compose.yml`,
   `project.config.yml`, quality workflow) with the Go (Gin) backend blueprint. The Django/Celery implementation moved to
   `legacy/`.
