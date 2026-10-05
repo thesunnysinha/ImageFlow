@@ -1,0 +1,35 @@
+name: Mobile
+
+on:
+  pull_request:
+    paths: ["services/mobile/**", ".github/workflows/mobile.yml"]
+  push:
+    branches: [main]
+    paths: ["services/mobile/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  mobile:
+    name: Typecheck, tests and bundle
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: services/mobile/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      # Proves Metro can bundle the app for both platforms (no device or store account needed).
+      - run: npx expo export --platform android --platform ios --output-dir dist
+        env:
+          EXPO_OFFLINE: "1"
+          CI: "1"
+          EXPO_NO_TELEMETRY: "1"
