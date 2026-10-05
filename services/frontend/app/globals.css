@@ -1,0 +1,53 @@
+:root {
+  --bg: #f7f8fb; --card: #fff; --text: #14181f; --muted: #5d6675; --border: #dfe3ea; --primary: #2457d6; --on-primary: #fff; --error: #c0392b;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0f1218; --card: #1a1f29; --text: #eef1f6; --muted: #9aa4b5; --border: #2a3140; --primary: #6c93ff; --on-primary: #0f1218; --error: #ff7a6b; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+main { max-width: 860px; margin: 0 auto; padding: 16px 16px 48px; }
+h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.2; margin: 24px 0 8px; }
+h2 { font-size: 1.3rem; margin: 32px 0 8px; }
+a { color: var(--primary); }
+.lead { font-size: 1.05rem; color: var(--muted); margin: 0 0 20px; }
+.muted { color: var(--muted); }
+.small { font-size: 0.875rem; }
+.error { color: var(--error); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.site-header { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; padding: 12px 16px; background: var(--card); border-bottom: 1px solid var(--border); }
+.site-header nav, .site-footer nav { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.brand { font-weight: 800; font-size: 1.15rem; text-decoration: none; color: var(--text); }
+.site-header nav a, .site-footer a { text-decoration: none; font-size: 0.9rem; }
+.site-footer { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; color: var(--muted); font-size: 0.9rem; }
+
+.tool { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin: 8px 0 24px; }
+.drop { border: 2px dashed var(--border); border-radius: 14px; padding: 28px 16px; text-align: center; transition: border-color 0.15s, background 0.15s; }
+.drop-active { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.drop-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 4px; }
+.drop p { margin: 0 0 12px; }
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 16px; }
+.controls label { display: flex; flex-direction: column; gap: 4px; font-size: 0.875rem; font-weight: 600; }
+.controls select, .controls input[type="number"] { font: inherit; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.btn { font: inherit; font-weight: 600; min-height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.btn-plain { border-color: transparent; color: var(--muted); }
+.btn-small { min-height: 34px; padding: 0 12px; font-size: 0.875rem; }
+.summary { margin: 4px 0 12px; font-size: 1.05rem; }
+.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.row .name { flex: 1 1 160px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.privacy-note { margin: 16px 0 0; text-align: center; }
+
+/* Reserved ad space: the box has its height before the ad loads, so nothing shifts. */
+.ad { position: relative; margin: 24px 0; padding-top: 18px; text-align: center; overflow: hidden; }
+.ad-label { position: absolute; top: 0; left: 0; right: 0; font-size: 11px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+
+details { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin: 8px 0; background: var(--card); }
+summary { cursor: pointer; font-weight: 600; }
+.tool-list { padding-left: 18px; }
+.tool-list li { margin: 6px 0; }

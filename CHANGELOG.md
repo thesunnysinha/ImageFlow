@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Website (`services/frontend`, Next.js 15, static pages): image compressor that runs entirely in the browser (JPEG, PNG and
+  WebP in and out, quality slider, "max size in KB" search, resize, ZIP download, up to 20 images), six tool pages with
+  original copy and FAQ structured data, sitemap, robots, privacy policy, favicon. AdSense support that stays inert until
+  configured: Consent Mode defaults denied for the EEA/UK/CH before the ad tag loads, fixed-height slots away from the
+  tool's buttons, `/ads.txt` from the publisher id. Template wiring for `--frontend nextjs` (compose, nginx, Launchpad
+  manifest, CI). Unit tests plus a Chromium end-to-end test (8 checks, including an ads-enabled build) run in CI.
 - S3-compatible storage (`STORAGE_BACKEND=s3`: AWS S3, Cloudflare R2, MinIO, Backblaze B2) next to local disk, so
   replicas share results and disks can be ephemeral. The bucket is checked at start. New
   `GET /api/v1/jobs/{id}/items/{position}/output-url` returns a 5-minute presigned download URL (501 on local storage).
