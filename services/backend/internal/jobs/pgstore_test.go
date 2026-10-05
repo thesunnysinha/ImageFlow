@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -92,5 +93,30 @@ func TestCreateAndGetKeepOrderAndOwnership(t *testing.T) {
 	}
 	if err := s.Ping(ctx); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestListIsNewestFirstScopedAndPaged(t *testing.T) {
+	s, _ := newStore(t)
+	ctx := context.Background()
+	var ids []string
+	for i := 0; i < 3; i++ {
+		j, err := s.Create(ctx, "owner-a", nil, []string{"https://x/1.jpg", "https://x/2.jpg"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, j.ID)
+		time.Sleep(5 * time.Millisecond)
+	}
+	if _, err := s.Create(ctx, "owner-b", nil, []string{"https://x/1.jpg"}); err != nil {
+		t.Fatal(err)
+	}
+	page, err := s.List(ctx, "owner-a", 2, time.Time{})
+	if err != nil || len(page) != 2 || page[0].ID != ids[2] || page[1].ID != ids[1] || page[0].Counts.Total != 2 {
+		t.Fatalf("first page: %+v err=%v", page, err)
+	}
+	rest, err := s.List(ctx, "owner-a", 2, page[1].CreatedAt)
+	if err != nil || len(rest) != 1 || rest[0].ID != ids[0] {
+		t.Fatalf("second page: %+v err=%v", rest, err)
 	}
 }

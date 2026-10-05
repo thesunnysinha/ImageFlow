@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"app/internal/jobs"
 	"app/internal/storage"
@@ -34,6 +35,16 @@ func (f *fakeStore) OutputKey(_ context.Context, owner, id string, position int)
 		return "job/0.jpg", nil
 	}
 	return "", jobs.ErrNotFound
+}
+func (f *fakeStore) List(_ context.Context, owner string, limit int, _ time.Time) ([]jobs.Summary, error) {
+	out := []jobs.Summary{}
+	if j, ok := f.byOwner[owner]; ok {
+		out = append(out, jobs.Summary{ID: j.ID, Status: j.Status, Counts: jobs.Counts{Total: len(j.Items)}})
+	}
+	if len(out) > limit {
+		out = out[:limit]
+	}
+	return out, nil
 }
 func (f *fakeStore) Get(_ context.Context, owner, id string) (jobs.Job, error) {
 	if j, ok := f.byOwner[owner]; ok && j.ID == id {
@@ -176,5 +187,31 @@ func TestOutputIsServedToTheOwnerOnly(t *testing.T) {
 		if w.Code != want {
 			t.Errorf("%s as %q: got %d want %d", c.path, c.key, w.Code, want)
 		}
+	}
+}
+
+func TestListIsScopedToTheKeyAndValidatesParameters(t *testing.T) {
+	h := newApp(fresh(), 10)
+	call(h, "POST", "/api/v1/jobs", "k1", `{"source_urls":["https://a.com/1.jpg"]}`)
+	w, env := call(h, "GET", "/api/v1/jobs", "k1", "")
+	data, _ := env["data"].([]any)
+	if w.Code != 200 || len(data) != 1 {
+		t.Fatalf("own list: code=%d env=%v", w.Code, env)
+	}
+	if _, env := call(h, "GET", "/api/v1/jobs", "k2", ""); len(env["data"].([]any)) != 0 {
+		t.Fatalf("another key must see nothing: %v", env)
+	}
+	// A full page advertises a cursor; a short one does not.
+	_, env = call(h, "GET", "/api/v1/jobs?limit=1", "k1", "")
+	if env["meta"].(map[string]any)["next_before"] == nil {
+		t.Fatalf("a full page should carry next_before: %v", env["meta"])
+	}
+	for _, q := range []string{"?limit=0", "?limit=101", "?limit=x", "?before=yesterday"} {
+		if w, _ := call(h, "GET", "/api/v1/jobs"+q, "k1", ""); w.Code != 422 {
+			t.Errorf("%s: got %d want 422", q, w.Code)
+		}
+	}
+	if w, _ := call(h, "GET", "/api/v1/jobs", "", ""); w.Code != 401 {
+		t.Errorf("no key: %d", w.Code)
 	}
 }

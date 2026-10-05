@@ -20,6 +20,17 @@ paths:
         '200': {description: Database is reachable}
         '503': {description: Database is not reachable}
   /jobs:
+    get:
+      operationId: listJobs
+      summary: List the caller's jobs, newest first
+      security: [{apiKey: []}]
+      parameters:
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+        - {name: before, in: query, description: "created_at cursor (RFC 3339); use meta.next_before from the previous page", schema: {type: string, format: date-time}}
+      responses:
+        '200': {description: "Jobs without items, each with counts {total, completed, failed}"}
+        '401': {description: Missing or invalid API key}
+        '422': {description: Invalid limit or before}
     post:
       operationId: createJob
       summary: Create an image-processing job from source URLs
