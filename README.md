@@ -1,74 +1,44 @@
-# Low-Level Design (LLD)
-**Overview**:
-ImageFlow is built to efficiently process CSV files containing product image URLs. The system accepts a CSV file, validates and stores its data, processes images asynchronously (simulated via URL modification), and provides status tracking. Optionally, a webhook is triggered upon completion.
+# ImageFlow
 
-# Component Breakdown
-## API Endpoints
+Batch image-processing API. Clients submit image URLs and get a job they can poll; images are processed asynchronously.
 
-**CSV Upload API**:
-Accepts a CSV file (and optional webhook URL).
-Validates and parses CSV content.
-Creates a unique processing request and product records.
-Enqueues an asynchronous task via Celery.
-**Status API**:
-Retrieves processing status and details using the unique request ID.
+The project follows the layout of [master-project-template](https://github.com/thesunnysinha/master-project-template)
+(Go + Gin backend, PostgreSQL, Launchpad deployment, no web frontend: a mobile app will consume the API).
 
-## Database Models:
+## Layout
 
-**ProcessingRequest**:
-Stores CSV file metadata, processing status, and webhook URL.
-**Product**:
-Stores individual product details, including input and output image URLs.
+| Path | What |
+|---|---|
+| `services/backend` | Go (Gin) API: `cmd/server`, `internal/{config,envelope,httpapi,jobs,database,safeurl}`, `migrations/*.sql`, `openapi.yaml` |
+| `env/` | `env.template.yml` (safe defaults); generated secrets stay in ignored `env/env.override.local.yml` |
+| `docker-compose.yml`, `docker/nginx` | local stack: Postgres, backend, proxy on <http://localhost:8080> |
+| `launchpad/application.json`, `DEPLOYMENT.md` | Launchpad manifest and one-time setup |
+| `.github/workflows/quality.yml` | changelog check, gofmt, vet, race tests against Postgres, build |
+| `legacy/` | the original Django/Celery implementation, kept for reference until the new service reaches parity |
 
-## Asynchronous Processing (Celery)
+## API (`/api/v1`)
 
-**Task (process_csv_images)**:
-Fetches the processing request.
-Processes each product (simulates image compression).
-Updates output image URLs and processing status.
-Optionally triggers a webhook callback upon completion.
-Webhook Integration (Bonus):
+All responses use the envelope `{success, code, message, data, meta, trace_id}` and carry `X-Request-ID`.
 
-Sends an HTTP POST request to the provided webhook URL with the processing result.
+| Method | Path | Auth | |
+|---|---|---|---|
+| GET | `/health`, `/ready` | none | liveness (no dependencies) and readiness (database) |
+| POST | `/jobs` | `Authorization: Bearer <key>` | body `{"source_urls": [...], "webhook_url": "..."}`, returns 202 + `Location` |
+| GET | `/jobs/{id}` | same | job and its items; only visible to the key that created it |
 
-## Logging & Documentation:
+Source and webhook URLs are rejected when they resolve to private, loopback or link-local addresses.
 
-Detailed logging is implemented throughout.
-Code includes comprehensive docstrings, inline comments, and type annotations.
-
-
-# Visual System Diagram
-
-Checkout `ImageFlow.drawio` at root level
-
-**OR**
+## Develop
 
 ```bash
-https://drive.google.com/file/d/1JUWTctS0GNGWX2IomNhQdultd-rRSBqN/view?usp=sharing
+python run.py doctor        # needs env/env.override.local.yml (python run.py configure generates it in a new project)
+python run.py dev           # docker compose up --build; API at http://localhost:8080/api/v1
+cd services/backend && go test -race ./...
+TEST_DATABASE_URL=postgres://... go test ./internal/jobs   # database tests skip without it
 ```
 
-# Swagger API Documentation
+## Status
 
-```bash
-http://localhost:8000/swagger
-```
-
-# Postman Collection
-
-Checkout `ImageFlow.postman_collection.json` at root level
-
-**OR**
-
-```bash
-https://drive.google.com/file/d/1KcDuw-hABvE3XXRcUSVsHsC5eGtSXit_/view?usp=sharing
-```
-
-## API Results
-
-**Upload API**
-
-![UploadAPI](./api_results/upload_api.png)
-
-**Status API**
-
-![StatusAPI](./api_results/status_api.png)
+Phase 1 is in place: job creation and status, migrations, API-key auth, URL safety checks. Not built yet: the worker
+(real fetching and compression, retries, webhooks), object storage with presigned uploads, user accounts, and the
+Expo mobile app.

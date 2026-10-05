@@ -1,0 +1,13 @@
+{
+  "auth": "jwt-cookie",
+  "backend": "gin",
+  "database": "postgresql",
+  "deploy": {
+    "domain": "imageflow.example.com",
+    "mode": "launchpad",
+    "name": "imageflow"
+  },
+  "deployment": "docker-compose+launchpad",
+  "frontend": "none",
+  "schema_version": 1
+}
