@@ -1,3 +1,12 @@
+# Legacy implementation (Django + Celery)
+
+The original ImageFlow backend, kept for reference. It is superseded by `services/backend` (Go + Gin) and is not built,
+tested or deployed.
+
+Removed from this folder: the committed `.env` files (they held a database password; **rotate it and the Django
+`SECRET_KEY`**, both remain in git history), the vendored `staticfiles/` output and a sample CSV. Because the env files
+are gone, `docker-compose.yml` here no longer runs as-is.
+
 # Low-Level Design (LLD)
 **Overview**:
 ImageFlow is built to efficiently process CSV files containing product image URLs. The system accepts a CSV file, validates and stores its data, processes images asynchronously (simulated via URL modification), and provides status tracking. Optionally, a webhook is triggered upon completion.
