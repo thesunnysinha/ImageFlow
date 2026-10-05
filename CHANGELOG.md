@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Retention: a janitor deletes finished jobs and their stored images after `RETENTION_HOURS` (default 168; 0 disables),
+  in batches, files first then rows, safe to repeat after an interruption. Queued and processing jobs are never touched.
+  `Storage` gains an idempotent `Delete` (local disk and S3-compatible). Verified with Postgres tests and on the real
+  server binary.
+- Fix: the worker started polling before migrations finished, logging `relation does not exist` errors on a fresh database.
+  It now starts after the schema is in place.
+- Production website image (multi-stage, Next.js standalone, UID 10001, healthcheck) replacing the template's dev-server
+  Dockerfile; compose gets restart policies and the proxy waits for healthy services. `scripts/smoke.sh` brings up the whole
+  stack and checks it through the proxy; CI runs it. The images were built and the stack run end to end.
 - Mobile: compress photos on the device. Pick up to 20 photos (`expo-image-picker`), re-encode as JPEG with the platform codecs
   (`expo-image-manipulator`), with a quality preset, a longest-side limit and an optional maximum size in KB (bisection for the
   best quality that fits, temp files cleaned up), then save or share (`expo-sharing`). Works before any server is configured,

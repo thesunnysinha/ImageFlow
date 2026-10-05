@@ -156,6 +156,7 @@ func TestUnknownRouteAndMethodUseTheEnvelope(t *testing.T) {
 type memStorage struct{}
 
 func (memStorage) Put(context.Context, string, io.Reader) (int64, error) { return 0, nil }
+func (memStorage) Delete(context.Context, string) error                  { return nil }
 func (memStorage) Open(_ context.Context, key string) (io.ReadCloser, error) {
 	if key == "job/0.jpg" {
 		return io.NopCloser(strings.NewReader("JPEGDATA")), nil

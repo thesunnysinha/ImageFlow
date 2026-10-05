@@ -145,5 +145,27 @@ func TestNewS3FailsFastOnBadConfiguration(t *testing.T) {
 	}
 }
 
+func TestS3DeleteRemovesTheObjectAndIsIdempotent(t *testing.T) {
+	s, err := NewS3(context.Background(), newFakeS3(t, "images"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	if _, err := s.Put(ctx, "job/0.jpg", strings.NewReader("x")); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Delete(ctx, "job/0.jpg"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Open(ctx, "job/0.jpg"); err != ErrNotFound {
+		t.Fatalf("object should be gone, got %v", err)
+	}
+	for _, key := range []string{"job/0.jpg", "never/existed", "../bad", ""} {
+		if err := s.Delete(ctx, key); err != nil {
+			t.Errorf("Delete(%q) must not fail: %v", key, err)
+		}
+	}
+}
+
 var _ Presigner = (*S3)(nil)
 var _ Storage = (*S3)(nil)

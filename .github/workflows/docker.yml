@@ -1,0 +1,22 @@
+name: Docker
+
+on:
+  pull_request:
+    paths: ["services/**", "docker-compose.yml", "docker/**", "scripts/**", "env/**", "cli/**", ".github/workflows/docker.yml"]
+  push:
+    branches: [main]
+    paths: ["services/**", "docker-compose.yml", "docker/**", "scripts/**", "env/**", "cli/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Build images and smoke test the stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      # Builds the backend and website images, starts database, backend, website and proxy with Docker Compose, and
+      # checks pages, API, auth, SSRF refusal and persistence through the proxy. Tears everything down at the end.
+      - run: scripts/smoke.sh

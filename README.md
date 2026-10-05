@@ -39,7 +39,8 @@ HTTP clients re-check the address at connect time (DNS rebinding, redirects).
 A worker (in the API process) fetches each image (20 MB and 40 megapixel limits), shrinks it to at most 2048 px on the
 longest side and re-encodes it (JPEG quality 80; PNG stays PNG; the original is kept when re-encoding would not make it
 smaller). Job status: `queued` → `processing` → `completed`, `partial` or `failed`. When a job has a `webhook_url`, a
-signed callback is sent once it finishes (see `DEPLOYMENT.md`).
+signed callback is sent once it finishes (see `DEPLOYMENT.md`). Finished jobs and their images are deleted after
+`RETENTION_HOURS` (default seven days) so storage does not grow without bound.
 
 ## Develop
 

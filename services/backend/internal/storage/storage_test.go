@@ -46,3 +46,26 @@ func TestKeysCannotEscapeTheRoot(t *testing.T) {
 		}
 	}
 }
+
+func TestLocalDeleteIsIdempotentAndTidiesTheJobDirectory(t *testing.T) {
+	root := t.TempDir()
+	l, _ := NewLocal(root)
+	ctx := context.Background()
+	if _, err := l.Put(ctx, "job1/0.jpg", strings.NewReader("a")); err != nil {
+		t.Fatal(err)
+	}
+	if err := l.Delete(ctx, "job1/0.jpg"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := l.Open(ctx, "job1/0.jpg"); err != ErrNotFound {
+		t.Fatalf("object should be gone, got %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "job1")); err == nil {
+		t.Fatal("the empty job directory should be removed")
+	}
+	for _, key := range []string{"job1/0.jpg", "never/existed", "../escape", ""} {
+		if err := l.Delete(ctx, key); err != nil {
+			t.Errorf("Delete(%q) must not fail: %v", key, err)
+		}
+	}
+}

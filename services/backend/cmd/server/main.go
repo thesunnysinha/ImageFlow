@@ -17,6 +17,7 @@ import (
 	"app/internal/config"
 	"app/internal/database"
 	"app/internal/httpapi"
+	"app/internal/janitor"
 	"app/internal/jobs"
 	"app/internal/safeurl"
 	"app/internal/storage"
@@ -124,6 +125,10 @@ func run(log *slog.Logger, cfg config.Config) error {
 			Queue: store, Storage: files, Config: wcfg, Log: log,
 			Fetch: safeurl.NewClient(60*time.Second, false, true),
 			Hooks: safeurl.NewClient(15*time.Second, false, false),
+		}
+		if cfg.Retention > 0 {
+			j := &janitor.Janitor{Store: store, Storage: files, Retention: cfg.Retention, Interval: 10 * time.Minute, Log: log}
+			go j.Run(ctx)
 		}
 		w.Run(ctx)
 	}()
