@@ -14,6 +14,7 @@ export default function RootLayout() {
         <StatusBar style="auto" />
         <Stack screenOptions={{ headerStyle: { backgroundColor: t.card }, headerTintColor: t.text, contentStyle: { backgroundColor: t.bg } }}>
           <Stack.Screen name="index" options={{ title: "ImageFlow" }} />
+          <Stack.Screen name="compress" options={{ title: "Compress photos" }} />
           <Stack.Screen name="new" options={{ title: "New job", presentation: "modal" }} />
           <Stack.Screen name="settings" options={{ title: "Server", presentation: "modal" }} />
           <Stack.Screen name="job/[id]" options={{ title: "Job" }} />

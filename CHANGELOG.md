@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Mobile: compress photos on the device. Pick up to 20 photos (`expo-image-picker`), re-encode as JPEG with the platform codecs
+  (`expo-image-manipulator`), with a quality preset, a longest-side limit and an optional maximum size in KB (bisection for the
+  best quality that fits, temp files cleaned up), then save or share (`expo-sharing`). Works before any server is configured,
+  offline, and uploads nothing. Never returns a bigger file than the original. Unit tests for the search and sizing logic; CI
+  still bundles Android and iOS. Not run on a device. No ads in the app yet (AdMob needs a development build and your AdMob ids).
 - S3-compatible storage (`STORAGE_BACKEND=s3`: AWS S3, Cloudflare R2, MinIO, Backblaze B2) next to local disk, so
   replicas share results and disks can be ephemeral. The bucket is checked at start. New
   `GET /api/v1/jobs/{id}/items/{position}/output-url` returns a 5-minute presigned download URL (501 on local storage).

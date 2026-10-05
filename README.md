@@ -10,7 +10,7 @@ The project follows the layout of [master-project-template](https://github.com/t
 | Path | What |
 |---|---|
 | `services/backend` | Go (Gin) API: `cmd/server`, `internal/{config,envelope,httpapi,jobs,database,safeurl}`, `migrations/*.sql`, `openapi.yaml` |
-| `services/mobile` | Expo (React Native, TypeScript, Expo Router) app: server settings in the device keystore, job list, new job, live job progress with image previews |
+| `services/mobile` | Expo (React Native, TypeScript, Expo Router) app: compress photos on the device (no server), plus server settings in the keystore, job list, new job and live job progress for URL batches |
 | `env/` | `env.template.yml` (safe defaults); generated secrets stay in ignored `env/env.override.local.yml` |
 | `docker-compose.yml`, `docker/nginx` | local stack: Postgres, backend, proxy on <http://localhost:8080> |
 | `launchpad/application.json`, `DEPLOYMENT.md` | Launchpad manifest and one-time setup |
@@ -58,7 +58,7 @@ npm run typecheck && npm test
 npx expo start            # scan the QR code with Expo Go, or press a / i for an emulator
 ```
 
-Open **Server** in the app and enter your API address and key. On an Android emulator, the host machine is
+**Compress photos on this device** works straight away (no server, nothing uploaded): pick up to 20 photos, choose a quality, a longest side and optionally a maximum size in KB, then save or share the results. To process lists of image links, open **Server** and enter your API address and key. On an Android emulator, the host machine is
 `http://10.0.2.2:8080`. Plain `http` is for local development only; use `https` anywhere else.
 
 ## Status
